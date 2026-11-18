@@ -90,7 +90,7 @@ export default function VehiclesPage() {
 
                 <VehicleCrayonIllustration
                   visualKey={tier.key}
-                  className="mt-3 aspect-16/10 w-full"
+                  className="mt-3 aspect-[16/10] w-full min-h-[160px]"
                 />
 
                 <div className="mt-3 flex items-end justify-between gap-2">

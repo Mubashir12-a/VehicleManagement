@@ -4,8 +4,10 @@ import { useEffect, useRef, useState } from 'react'
  * High-performance 60/120fps animated number counter hook.
  * Uses native requestAnimationFrame with ease-out cubic interpolation.
  */
-export function useAnimatedNumber(targetValue, duration = 650) {
-  const [displayValue, setDisplayValue] = useState(() => Number(targetValue) || 0)
+export function useAnimatedNumber(targetValue, duration = 650, initialValue) {
+  const [displayValue, setDisplayValue] = useState(() =>
+    initialValue !== undefined ? Number(initialValue) : Number(targetValue) || 0,
+  )
   const displayRef = useRef(displayValue)
 
   useEffect(() => {

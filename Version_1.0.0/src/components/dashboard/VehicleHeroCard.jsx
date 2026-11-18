@@ -516,7 +516,7 @@ export default function VehicleHeroCard({ vehicle, summary, onSave }) {
             subType={activeData.subType}
             engineCc={activeData.engineCc}
             framed={false}
-            className="aspect-16/10 w-full max-w-lg"
+            className="aspect-[16/10] w-full max-w-lg min-h-[220px] max-h-[340px]"
           />
 
           <div className="mt-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">

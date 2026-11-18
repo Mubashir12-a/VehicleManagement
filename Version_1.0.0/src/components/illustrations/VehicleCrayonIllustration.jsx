@@ -73,11 +73,11 @@ export default function VehicleCrayonIllustration({
 
       {/* Transparent 3D illustration image without any background */}
       {imageSrc ? (
-        <div className="relative z-10 flex h-full w-full items-center justify-center p-2">
+        <div className="relative z-10 flex h-full w-full items-center justify-center p-3">
           <img
             src={imageSrc}
             alt={`${visual?.label || 'Vehicle'} illustration`}
-            className="max-h-full max-w-full object-contain drop-shadow-[0_20px_35px_rgba(0,0,0,0.85)] filter select-none transition-transform duration-500 hover:scale-105"
+            className="max-h-[260px] sm:max-h-[300px] w-auto max-w-full object-contain drop-shadow-[0_20px_35px_rgba(0,0,0,0.85)] filter select-none transition-transform duration-500 hover:scale-105"
             loading="lazy"
           />
         </div>
