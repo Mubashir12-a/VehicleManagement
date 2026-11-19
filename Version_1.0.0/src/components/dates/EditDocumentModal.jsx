@@ -17,6 +17,9 @@ function EditDocumentDialogContent({
   const [maxOdometerKm, setMaxOdometerKm] = useState(
     doc?.maxOdometerKm ? String(doc.maxOdometerKm) : '',
   )
+  const [amountPaid, setAmountPaid] = useState(
+    doc?.amountPaid ? String(doc.amountPaid) : '',
+  )
   const [notes, setNotes] = useState(doc?.notes || '')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState(null)
@@ -46,6 +49,7 @@ function EditDocumentDialogContent({
         issueDate: issueDate || null,
         expiryDate,
         maxOdometerKm: maxOdometerKm ? Number(maxOdometerKm) : null,
+        amountPaid: amountPaid ? Number(amountPaid) : 0,
         notes: notes.trim(),
       })
       onClose()
@@ -186,6 +190,27 @@ function EditDocumentDialogContent({
                 onChange={(e) => setIssueDate(e.target.value)}
                 className="mt-1.5 w-full rounded-xl border border-white/10 bg-[#12161c] px-3.5 py-2.5 font-mono text-sm text-white focus:border-lime-400 focus:outline-none focus:ring-1 focus:ring-lime-400"
               />
+            </div>
+          </div>
+
+          {/* Premium / Fee Amount */}
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400">
+              Fee / Premium Amount (₹) (Optional)
+            </label>
+            <div className="relative mt-1.5">
+              <input
+                type="number"
+                min={0}
+                step="any"
+                value={amountPaid}
+                onChange={(e) => setAmountPaid(e.target.value)}
+                placeholder="e.g. 15000 (0 if free)"
+                className="w-full rounded-xl border border-white/10 bg-[#12161c] px-3.5 py-2.5 font-mono text-sm text-white focus:border-lime-400 focus:outline-none focus:ring-1 focus:ring-lime-400"
+              />
+              <span className="absolute right-3.5 top-1/2 -translate-y-1/2 font-mono text-xs text-lime-400">
+                ₹
+              </span>
             </div>
           </div>
 

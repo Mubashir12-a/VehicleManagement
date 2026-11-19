@@ -325,6 +325,7 @@ create table if not exists public.vehicle_documents (
   issue_date date,
   expiry_date date not null,
   max_odometer_km integer,
+  amount_paid numeric(10, 2) not null default 0 check (amount_paid >= 0),
   notes text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()

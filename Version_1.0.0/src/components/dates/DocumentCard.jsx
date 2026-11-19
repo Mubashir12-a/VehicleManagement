@@ -103,6 +103,15 @@ export default function DocumentCard({
             </span>
           </div>
 
+          {Number(doc.amountPaid) > 0 && (
+            <div className="flex items-center justify-between pt-1 text-xs">
+              <span className="text-zinc-500">Premium / Fee:</span>
+              <span className="font-mono font-bold text-lime-400">
+                ₹{Number(doc.amountPaid).toLocaleString('en-IN')}
+              </span>
+            </div>
+          )}
+
           {Number(doc.maxOdometerKm) > 0 && (
             <div className="flex items-center justify-between pt-1 text-xs">
               <span className="text-zinc-500">Odo Limit:</span>

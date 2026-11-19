@@ -171,6 +171,7 @@ function mapVehicleDocumentRow(row) {
     issueDate: row.issue_date || '',
     expiryDate: row.expiry_date,
     maxOdometerKm: row.max_odometer_km ? Number(row.max_odometer_km) : null,
+    amountPaid: Math.max(0, Number(row.amount_paid) || 0),
     notes: row.notes || '',
     createdAt: row.created_at,
   }
@@ -1216,6 +1217,7 @@ export async function upsertVehicleDocumentRecord(primaryVehicle, docInput) {
     maxOdometerKm: docInput.maxOdometerKm
       ? Number(docInput.maxOdometerKm)
       : null,
+    amountPaid: Math.max(0, Number(docInput.amountPaid) || 0),
     notes: (docInput.notes || '').trim(),
     createdAt: new Date().toISOString(),
   }
@@ -1240,6 +1242,7 @@ export async function upsertVehicleDocumentRecord(primaryVehicle, docInput) {
           issue_date: localDoc.issueDate || null,
           expiry_date: localDoc.expiryDate,
           max_odometer_km: localDoc.maxOdometerKm,
+          amount_paid: localDoc.amountPaid,
           notes: localDoc.notes,
           updated_at: new Date().toISOString(),
         })
@@ -1264,6 +1267,7 @@ export async function upsertVehicleDocumentRecord(primaryVehicle, docInput) {
           issue_date: localDoc.issueDate || null,
           expiry_date: localDoc.expiryDate,
           max_odometer_km: localDoc.maxOdometerKm,
+          amount_paid: localDoc.amountPaid,
           notes: localDoc.notes,
         })
         .select('*')
