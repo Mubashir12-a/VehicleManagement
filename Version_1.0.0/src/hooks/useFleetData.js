@@ -82,6 +82,24 @@ const defaultFallback = {
 
 const FleetContext = createContext(defaultFallback)
 
+function recalculateStateAnalytics(prevState, overrideProps = {}) {
+  const merged = { ...prevState, ...overrideProps }
+  const analytics = computeFleetAnalytics(
+    merged.vehicles,
+    merged.monthlyTrends,
+    merged.fuelRefills,
+    merged.maintenance,
+    merged.componentServiceLogs,
+    merged.vehicleRepairs,
+    merged.vehicleDocuments,
+    merged.serviceReminders,
+  )
+  return {
+    ...merged,
+    ...analytics,
+  }
+}
+
 function useProvideFleetData() {
   const [state, setState] = useState(() => ({
     loading: true,
@@ -135,20 +153,11 @@ function useProvideFleetData() {
   const updatePrimaryVehicle = useCallback(
     async (updates) => {
       const result = await updatePrimaryVehicleRecord(primaryVehicle, updates)
-      setState((prev) => {
-        const nextVehicles = [result.vehicle]
-        const analytics = computeFleetAnalytics(
-          nextVehicles,
-          prev.monthlyTrends,
-          prev.fuelRefills,
-          prev.maintenance,
-        )
-        return {
-          ...prev,
-          vehicles: nextVehicles,
-          ...analytics,
-        }
-      })
+      setState((prev) =>
+        recalculateStateAnalytics(prev, {
+          vehicles: [result.vehicle],
+        }),
+      )
       return result
     },
     [primaryVehicle],
@@ -168,19 +177,10 @@ function useProvideFleetData() {
           mileage: nextRefills[0]?.odometerKm ?? result.vehicle.mileage,
           fuelLevel: nextRefills[0]?.fuelLevelAfter ?? result.vehicle.fuelLevel,
         }
-        const nextVehicles = [syncedVehicle]
-        const analytics = computeFleetAnalytics(
-          nextVehicles,
-          prev.monthlyTrends,
-          nextRefills,
-          prev.maintenance,
-        )
-        return {
-          ...prev,
-          vehicles: nextVehicles,
+        return recalculateStateAnalytics(prev, {
+          vehicles: [syncedVehicle],
           fuelRefills: nextRefills,
-          ...analytics,
-        }
+        })
       })
       return result
     },
@@ -208,19 +208,10 @@ function useProvideFleetData() {
           mileage: nextRefills[0]?.odometerKm ?? result.vehicle.mileage,
           fuelLevel: nextRefills[0]?.fuelLevelAfter ?? result.vehicle.fuelLevel,
         }
-        const nextVehicles = [syncedVehicle]
-        const analytics = computeFleetAnalytics(
-          nextVehicles,
-          prev.monthlyTrends,
-          nextRefills,
-          prev.maintenance,
-        )
-        return {
-          ...prev,
-          vehicles: nextVehicles,
+        return recalculateStateAnalytics(prev, {
+          vehicles: [syncedVehicle],
           fuelRefills: nextRefills,
-          ...analytics,
-        }
+        })
       })
       return result
     },
@@ -241,19 +232,10 @@ function useProvideFleetData() {
           mileage: nextRefills[0]?.odometerKm ?? 0,
           fuelLevel: nextRefills[0]?.fuelLevelAfter ?? 75,
         }
-        const nextVehicles = [syncedVehicle]
-        const analytics = computeFleetAnalytics(
-          nextVehicles,
-          prev.monthlyTrends,
-          nextRefills,
-          prev.maintenance,
-        )
-        return {
-          ...prev,
-          vehicles: nextVehicles,
+        return recalculateStateAnalytics(prev, {
+          vehicles: [syncedVehicle],
           fuelRefills: nextRefills,
-          ...analytics,
-        }
+        })
       })
       return result
     },
@@ -283,11 +265,10 @@ function useProvideFleetData() {
         const nextItems = prev.maintenanceItems.map((existing) =>
           existing.itemKey === item.itemKey ? result.item : existing,
         )
-        return {
-          ...prev,
+        return recalculateStateAnalytics(prev, {
           componentServiceLogs: nextLogs,
           maintenanceItems: nextItems,
-        }
+        })
       })
       return result
     },
@@ -312,11 +293,10 @@ function useProvideFleetData() {
             ? { ...existing, lastServiceOdo: result.newLastOdo }
             : existing,
         )
-        return {
-          ...prev,
+        return recalculateStateAnalytics(prev, {
           componentServiceLogs: nextLogs,
           maintenanceItems: nextItems,
-        }
+        })
       })
       return result
     },
@@ -331,10 +311,9 @@ function useProvideFleetData() {
       )
       setState((prev) => {
         const nextRepairs = [result.repair, ...(prev.vehicleRepairs || [])]
-        return {
-          ...prev,
+        return recalculateStateAnalytics(prev, {
           vehicleRepairs: nextRepairs,
-        }
+        })
       })
       return result
     },
@@ -344,12 +323,13 @@ function useProvideFleetData() {
   const deleteVehicleRepair = useCallback(
     async (repairId) => {
       const result = await deleteVehicleRepairRecord(primaryVehicle, repairId)
-      setState((prev) => ({
-        ...prev,
-        vehicleRepairs: (prev.vehicleRepairs || []).filter(
-          (r) => r.id !== repairId,
-        ),
-      }))
+      setState((prev) =>
+        recalculateStateAnalytics(prev, {
+          vehicleRepairs: (prev.vehicleRepairs || []).filter(
+            (r) => r.id !== repairId,
+          ),
+        }),
+      )
       return result
     },
     [primaryVehicle],
@@ -364,10 +344,9 @@ function useProvideFleetData() {
         const nextDocs = exists
           ? existing.map((d) => (d.id === result.doc.id ? result.doc : d))
           : [...existing, result.doc]
-        return {
-          ...prev,
+        return recalculateStateAnalytics(prev, {
           vehicleDocuments: nextDocs,
-        }
+        })
       })
       return result
     },
@@ -377,12 +356,13 @@ function useProvideFleetData() {
   const deleteVehicleDocument = useCallback(
     async (docId) => {
       const result = await deleteVehicleDocumentRecord(primaryVehicle, docId)
-      setState((prev) => ({
-        ...prev,
-        vehicleDocuments: (prev.vehicleDocuments || []).filter(
-          (d) => d.id !== docId,
-        ),
-      }))
+      setState((prev) =>
+        recalculateStateAnalytics(prev, {
+          vehicleDocuments: (prev.vehicleDocuments || []).filter(
+            (d) => d.id !== docId,
+          ),
+        }),
+      )
       return result
     },
     [primaryVehicle],
@@ -394,10 +374,11 @@ function useProvideFleetData() {
         primaryVehicle,
         reminderInput,
       )
-      setState((prev) => ({
-        ...prev,
-        serviceReminders: [...(prev.serviceReminders || []), result.reminder],
-      }))
+      setState((prev) =>
+        recalculateStateAnalytics(prev, {
+          serviceReminders: [...(prev.serviceReminders || []), result.reminder],
+        }),
+      )
       return result
     },
     [primaryVehicle],
@@ -410,14 +391,15 @@ function useProvideFleetData() {
         reminderId,
         completionInput,
       )
-      setState((prev) => ({
-        ...prev,
-        serviceReminders: (prev.serviceReminders || []).map((r) =>
-          r.id === reminderId
-            ? result.reminder || { ...r, ...result.updates }
-            : r,
-        ),
-      }))
+      setState((prev) =>
+        recalculateStateAnalytics(prev, {
+          serviceReminders: (prev.serviceReminders || []).map((r) =>
+            r.id === reminderId
+              ? result.reminder || { ...r, ...result.updates }
+              : r,
+          ),
+        }),
+      )
       return result
     },
     [primaryVehicle],
@@ -429,12 +411,13 @@ function useProvideFleetData() {
         primaryVehicle,
         reminderId,
       )
-      setState((prev) => ({
-        ...prev,
-        serviceReminders: (prev.serviceReminders || []).filter(
-          (r) => r.id !== reminderId,
-        ),
-      }))
+      setState((prev) =>
+        recalculateStateAnalytics(prev, {
+          serviceReminders: (prev.serviceReminders || []).filter(
+            (r) => r.id !== reminderId,
+          ),
+        }),
+      )
       return result
     },
     [primaryVehicle],

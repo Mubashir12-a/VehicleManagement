@@ -5,6 +5,7 @@ import {
   Fuel,
   LayoutDashboard,
   Plus,
+  ReceiptText,
   Settings,
   Wrench,
   X,
@@ -19,6 +20,7 @@ const navItems = [
   { label: 'Maintenance', to: '/maintenance', icon: Wrench },
   { label: 'Important Dates', to: '/important-dates', icon: CalendarClock },
   { label: 'Analytics', to: '/analytics', icon: BarChart3 },
+  { label: 'Finance History', to: '/finance-history', icon: ReceiptText },
   { label: 'Settings', to: '/settings', icon: Settings },
 ]
 

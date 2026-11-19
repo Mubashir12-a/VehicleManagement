@@ -1,4 +1,5 @@
 import {
+  Calendar,
   Check,
   CreditCard,
   Fuel,
@@ -27,6 +28,8 @@ export default function VehicleHeroCard({
   const [isEditing, setIsEditing] = useState(false)
   const [formData, setFormData] = useState(() => ({
     ...vehicle,
+    purchaseDate: vehicle.purchaseDate || '',
+    exShowroomPrice: vehicle.exShowroomPrice ?? 0,
     fuelType: vehicle.fuelType || 'Petrol (E10)',
     topSpeed: vehicle.topSpeed ?? vehicle.speed ?? 0,
     speed: vehicle.topSpeed ?? vehicle.speed ?? 0,
@@ -65,6 +68,8 @@ export default function VehicleHeroCard({
   const startEditing = () => {
     setFormData({
       ...vehicle,
+      purchaseDate: vehicle.purchaseDate || '',
+      exShowroomPrice: vehicle.exShowroomPrice ?? 0,
       fuelType: vehicle.fuelType || 'Petrol (E10)',
       topSpeed: vehicle.topSpeed ?? vehicle.speed ?? 0,
       speed: vehicle.topSpeed ?? vehicle.speed ?? 0,
@@ -197,6 +202,19 @@ export default function VehicleHeroCard({
                   <span className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-300">
                     {animatedSpeed} KM/H
                   </span>
+
+                  {vehicle.purchaseDate && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-lime-400/25 bg-lime-400/10 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-lime-300 shadow-[0_0_12px_rgba(163,230,53,0.12)]">
+                      <Calendar className="h-3 w-3 text-lime-400" />
+                      Purchased: {vehicle.purchaseDate}
+                    </span>
+                  )}
+
+                  {Number(vehicle.exShowroomPrice) > 0 && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-zinc-300">
+                      Ex-Showroom: ₹{Number(vehicle.exShowroomPrice).toLocaleString('en-IN')}
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -214,7 +232,7 @@ export default function VehicleHeroCard({
                   </p>
                 </div>
 
-                {/* Total Spend Till Now */}
+                {/* Total Spend Till Now (Every single rupee spent everywhere, excluding ex-showroom) */}
                 <div>
                   <CreditCard className="h-5 w-5 text-lime-400" />
                   <p className="mt-2.5 text-2xl font-extrabold tracking-tight text-white tabular-nums">
@@ -223,6 +241,11 @@ export default function VehicleHeroCard({
                   <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
                     Total Spend
                   </p>
+                  {Number(vehicle?.exShowroomPrice) > 0 && (
+                    <span className="mt-0.5 block text-[10px] font-medium text-zinc-500">
+                      Excl. Ex-Showroom (₹{Number(vehicle.exShowroomPrice).toLocaleString('en-IN')})
+                    </span>
+                  )}
                 </div>
 
                 {/* Health Option (reflects healthy / total, e.g. 18/18, 17/18) */}
@@ -272,12 +295,19 @@ export default function VehicleHeroCard({
                   </p>
                 </div>
 
-                {/* Registration Plate */}
+                {/* Registration Plate & Purchase Date */}
                 <div>
-                  <span className="inline-block rounded border border-lime-400/30 bg-lime-400/10 px-1.5 py-0.5 font-mono text-[10px] font-bold text-lime-300">
-                    REG
-                  </span>
-                  <p className="mt-2.5 font-mono text-base font-bold tracking-tight text-zinc-200">
+                  <div className="flex items-center gap-1.5">
+                    <span className="inline-block rounded border border-lime-400/30 bg-lime-400/10 px-1.5 py-0.5 font-mono text-[10px] font-bold text-lime-300">
+                      REG
+                    </span>
+                    {vehicle.purchaseDate && (
+                      <span className="text-[10px] font-medium text-zinc-400">
+                        • {vehicle.purchaseDate}
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-2 font-mono text-base font-bold tracking-tight text-zinc-200">
                     {vehicle.plate}
                   </p>
                   <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
@@ -462,17 +492,35 @@ export default function VehicleHeroCard({
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {/* Row 3: Plate, Purchase Date & Fuel Type (3 columns with generous width to prevent overflow) */}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <div>
                   <label className="block text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
-                    Plate
+                    Registration Plate *
                   </label>
                   <input
+                    required
                     value={formData.plate}
                     onChange={(e) =>
                       setFormData({ ...formData, plate: e.target.value })
                     }
-                    className="mt-1 w-full rounded-lg border border-white/10 bg-[#151a20] px-3 py-2 text-sm text-white focus:border-lime-400 focus:outline-none"
+                    placeholder="e.g. JK-01-BG-1152"
+                    className="mt-1 w-full rounded-lg border border-white/10 bg-[#151a20] px-3 py-2 font-mono text-sm uppercase text-white focus:border-lime-400 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+                    Purchase Date *
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={formData.purchaseDate || ''}
+                    onChange={(e) =>
+                      setFormData({ ...formData, purchaseDate: e.target.value })
+                    }
+                    className="mt-1 w-full rounded-lg border border-white/10 bg-[#151a20] px-3 py-2 font-mono text-sm text-white focus:border-lime-400 focus:outline-none"
                   />
                 </div>
 
@@ -509,6 +557,34 @@ export default function VehicleHeroCard({
                     </optgroup>
                   </select>
                 </div>
+              </div>
+
+              {/* Row 4: Ex-Showroom Price, Odometer & Fuel Level (3 columns) */}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div>
+                  <label className="block text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+                    Ex-Showroom Price (₹)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={
+                      formData.exShowroomPrice === 0 || !formData.exShowroomPrice
+                        ? ''
+                        : formData.exShowroomPrice
+                    }
+                    onChange={(e) => {
+                      const val =
+                        e.target.value === '' ? '' : Number(e.target.value)
+                      setFormData({ ...formData, exShowroomPrice: val })
+                    }}
+                    placeholder="e.g. 185000"
+                    className="mt-1 w-full rounded-lg border border-lime-400/30 bg-[#151a20] px-3 py-2 font-mono text-sm font-bold text-lime-300 placeholder-zinc-500 focus:border-lime-400 focus:outline-none"
+                  />
+                  <p className="mt-0.5 text-[9px] text-zinc-500">
+                    Only this price excluded from total spend
+                  </p>
+                </div>
 
                 <div>
                   <label className="block text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
@@ -528,7 +604,7 @@ export default function VehicleHeroCard({
                       setFormData({ ...formData, mileage: val })
                     }}
                     placeholder="0"
-                    className="mt-1 w-full rounded-lg border border-white/10 bg-[#151a20] px-3 py-2 text-sm font-mono text-white placeholder-zinc-500 focus:border-lime-400 focus:outline-none"
+                    className="mt-1 w-full rounded-lg border border-white/10 bg-[#151a20] px-3 py-2 font-mono text-sm text-white placeholder-zinc-500 focus:border-lime-400 focus:outline-none"
                   />
                   <p className="mt-0.5 text-[9px] text-zinc-500">
                     Auto-syncs with fuel refills
@@ -537,7 +613,7 @@ export default function VehicleHeroCard({
 
                 <div>
                   <label className="block text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
-                    Fuel (%)
+                    Fuel Level (%)
                   </label>
                   <input
                     type="number"

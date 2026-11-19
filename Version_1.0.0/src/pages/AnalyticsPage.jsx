@@ -11,6 +11,7 @@ import {
 import { useMemo, useState } from 'react'
 import AnimatedInvestmentChart from '../components/analytics/AnimatedInvestmentChart'
 import PageHeader from '../components/common/PageHeader'
+import RotaryYearDial from '../components/common/RotaryYearDial'
 import { useFleetData } from '../hooks/useFleetData'
 
 const CURRENT_YEAR = new Date().getFullYear()
@@ -73,6 +74,7 @@ function parseExpenseDate(dateStr) {
 
 export default function AnalyticsPage() {
   const {
+    primaryVehicle,
     fuelRefills = [],
     componentServiceLogs = [],
     vehicleRepairs = [],
@@ -197,14 +199,28 @@ export default function AnalyticsPage() {
     vehicleDocuments,
   ])
 
-  // 2. Discover all available years in data
+  // Purchase year from vehicle profile
+  const purchaseYear = useMemo(() => {
+    const parsed = parseExpenseDate(primaryVehicle?.purchaseDate)
+    return parsed?.year || 2024
+  }, [primaryVehicle?.purchaseDate])
+
+  // 2. Discover all available years from purchase date to latest year
   const availableYears = useMemo(() => {
-    const yearsSet = new Set([CURRENT_YEAR])
+    const minYear = Math.min(purchaseYear, CURRENT_YEAR)
+    const expenseYears = allExpenses
+      .map((e) => e.year)
+      .filter((y) => !isNaN(y))
+    const maxYear = Math.max(CURRENT_YEAR, ...expenseYears)
+    const yearsSet = new Set()
+    for (let y = minYear; y <= maxYear; y++) {
+      yearsSet.add(y)
+    }
     for (const item of allExpenses) {
       if (!isNaN(item.year)) yearsSet.add(item.year)
     }
-    return Array.from(yearsSet).sort((a, b) => b - a)
-  }, [allExpenses])
+    return Array.from(yearsSet).sort((a, b) => a - b)
+  }, [purchaseYear, allExpenses])
 
   // 3. Compile Monthly Data for the selected year (12 months: Jan -> Dec)
   const monthlyData = useMemo(() => {
@@ -399,32 +415,16 @@ export default function AnalyticsPage() {
           </button>
         </div>
 
-        {/* Year Selector (Visible in Monthly Mode) */}
+        {/* Interactive Automotive Rotary Dial (Compact & Interactive) */}
         {viewMode === 'monthly' && (
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">
-              Select Year:
-            </span>
-            <div className="flex items-center gap-1.5">
-              {availableYears.map((yr) => (
-                <button
-                  key={yr}
-                  type="button"
-                  onClick={() => {
-                    setSelectedYear(yr)
-                    setSelectedPeriodLabel(null)
-                  }}
-                  className={`rounded-xl px-3 py-1.5 font-mono text-xs font-bold transition-all ${
-                    selectedYear === yr
-                      ? 'border border-lime-400/40 bg-lime-400/15 text-lime-300 ring-1 ring-lime-400/40 shadow-[0_0_12px_rgba(163,230,53,0.2)]'
-                      : 'border border-white/8 bg-white/5 text-zinc-400 hover:border-white/20 hover:text-white'
-                  }`}
-                >
-                  {yr}
-                </button>
-              ))}
-            </div>
-          </div>
+          <RotaryYearDial
+            yearsList={availableYears}
+            activeYear={selectedYear}
+            onSelectYear={(yr) => {
+              setSelectedYear(yr)
+              setSelectedPeriodLabel(null)
+            }}
+          />
         )}
       </div>
 

@@ -7,7 +7,6 @@ import {
   defaultVehicleDocuments,
   defaultVehicleRepairs,
   fleetStatusData as mockStatusData,
-  fleetSummary as mockSummary,
   maintenanceSchedule as mockMaintenance,
   monthlyFleetTrends as mockMonthlyTrends,
   vehicleCategoryData as mockCategoryData,
@@ -68,6 +67,8 @@ function mapVehicleRow(row) {
     mileage: Number(row.mileage) || 0,
     topSpeed: Number(row.top_speed) || defaultVehicle.topSpeed || 0,
     speed: Number(row.top_speed) || defaultVehicle.topSpeed || 0,
+    purchaseDate: row.purchase_date || defaultVehicle.purchaseDate || '2024-01-15',
+    exShowroomPrice: Math.max(0, Number(row.ex_showroom_price) || 0),
     fuelLevel: Number(row.fuel_level) || 0,
     lastService: row.last_service || '—',
     nextService: row.next_service || '—',
@@ -169,6 +170,7 @@ function mapVehicleDocumentRow(row) {
     docNumber: row.doc_number || '',
     issuer: row.issuer || '',
     issueDate: row.issue_date || '',
+    durationYears: row.duration_years ? Number(row.duration_years) : 1,
     expiryDate: row.expiry_date,
     maxOdometerKm: row.max_odometer_km ? Number(row.max_odometer_km) : null,
     amountPaid: Math.max(0, Number(row.amount_paid) || 0),
@@ -183,6 +185,9 @@ function mapServiceReminderRow(row) {
     vehicleCode: row.vehicle_code,
     title: row.title,
     serviceType: row.service_type || 'Free Service',
+    dueDateFrom: row.due_date_from || row.due_date || '',
+    durationDaysMin: row.duration_days_min ? Number(row.duration_days_min) : null,
+    durationDaysMax: row.duration_days_max ? Number(row.duration_days_max) : null,
     dueDate: row.due_date || '',
     dueDateEnd: row.due_date_end || '',
     dueOdometerKm: row.due_odometer_km ? Number(row.due_odometer_km) : null,
@@ -298,6 +303,10 @@ export function computeFleetAnalytics(
   monthlyTrends,
   fuelRefills = [],
   maintenanceLogs = [],
+  componentServiceLogs = [],
+  vehicleRepairs = [],
+  vehicleDocuments = [],
+  serviceReminders = [],
 ) {
   const totalVehicles = vehicles.length
   const statusCounts = {
@@ -325,16 +334,48 @@ export function computeFleetAnalytics(
     }
   }
 
-  const totalFuelSpend = fuelRefills.reduce(
-    (sum, item) => sum + (Number(item.amountSpent) || 0),
+  // 1. Fuel Spend: every single rupee spent on refills
+  const totalFuelSpend = (fuelRefills || []).reduce((sum, item) => {
+    const cost =
+      Number(
+        item.amountSpent ??
+          item.totalCost ??
+          Number(item.liters || 0) * Number(item.pricePerLiter || 0),
+      ) || 0
+    return sum + cost
+  }, 0)
+
+  // 2. Documents Spend: Insurance, RC, PUC, Warranty fees
+  const totalDocumentsSpend = (vehicleDocuments || []).reduce((sum, doc) => {
+    const cost = Number(doc.amountPaid ?? doc.amount_paid ?? 0) || 0
+    return sum + cost
+  }, 0)
+
+  // 3. Services & Maintenance Spend: component logs, repairs, completed service reminders, maintenance logs
+  const componentLogsSpend = (componentServiceLogs || []).reduce(
+    (sum, log) => sum + (Number(log.cost ?? log.amount ?? 0) || 0),
     0,
   )
-  const totalMaintenanceSpend = maintenanceLogs.reduce(
-    (sum, item) => sum + (Number(item.estimatedCost) || 0),
+  const repairsSpend = (vehicleRepairs || []).reduce(
+    (sum, repair) => sum + (Number(repair.cost ?? repair.amount ?? 0) || 0),
     0,
   )
+  const remindersSpend = (serviceReminders || []).reduce(
+    (sum, rem) =>
+      sum + (Number(rem.amountPaid ?? rem.cost ?? rem.amount ?? 0) || 0),
+    0,
+  )
+  const maintenanceLogsSpend = (maintenanceLogs || []).reduce(
+    (sum, item) => sum + (Number(item.estimatedCost ?? item.cost ?? 0) || 0),
+    0,
+  )
+
+  const totalServicesSpend =
+    componentLogsSpend + repairsSpend + remindersSpend + maintenanceLogsSpend
+
+  // Total operational spend from every single rupee spent everywhere (strictly EXCLUDING bike ex-showroom price)
   const totalSpendTillNow = Number(
-    (totalFuelSpend + totalMaintenanceSpend).toFixed(2),
+    (totalFuelSpend + totalDocumentsSpend + totalServicesSpend).toFixed(2),
   )
 
   const monthlyFuelSummary = computeMonthlyFuelSummary(fuelRefills)
@@ -355,7 +396,9 @@ export function computeFleetAnalytics(
       monthlyMileage: 0,
       fleetUtilization,
       totalFuelSpend: Number(totalFuelSpend.toFixed(2)),
-      totalMaintenanceSpend: Number(totalMaintenanceSpend.toFixed(2)),
+      totalDocumentsSpend: Number(totalDocumentsSpend.toFixed(2)),
+      totalServicesSpend: Number(totalServicesSpend.toFixed(2)),
+      totalMaintenanceSpend: Number(totalServicesSpend.toFixed(2)),
       totalSpendTillNow,
     },
     monthlyFuelSummary,
@@ -440,7 +483,16 @@ export async function fetchFleetData() {
     vehicleRepairs: defaultVehicleRepairs,
     vehicleDocuments: defaultVehicleDocuments,
     serviceReminders: defaultServiceReminders,
-    summary: mockSummary,
+    summary: computeFleetAnalytics(
+      mockVehicles,
+      mockMonthlyTrends,
+      defaultFuelRefills,
+      mockMaintenance,
+      defaultComponentServiceLogs,
+      defaultVehicleRepairs,
+      defaultVehicleDocuments,
+      defaultServiceReminders,
+    ).summary,
     monthlyFuelSummary: computeMonthlyFuelSummary(defaultFuelRefills),
     statusData: mockStatusData,
     categoryData: mockCategoryData,
@@ -466,7 +518,7 @@ export async function fetchFleetData() {
       supabase
         .from('vehicles')
         .select(
-          'id, vehicle_code, name, brand, model, category, sub_type, engine_cc, top_speed, fuel_type, plate, driver, status, mileage, fuel_level, last_service, next_service',
+          'id, vehicle_code, name, brand, model, category, sub_type, engine_cc, top_speed, fuel_type, purchase_date, ex_showroom_price, plate, driver, status, mileage, fuel_level, last_service, next_service',
         )
         .order('created_at', { ascending: true })
         .limit(1),
@@ -603,6 +655,10 @@ export async function fetchFleetData() {
       monthlyTrends.length > 0 ? monthlyTrends : mockMonthlyTrends,
       fuelRefills,
       maintenance,
+      componentServiceLogs,
+      vehicleRepairs,
+      vehicleDocuments,
+      serviceReminders,
     )
 
     return {
@@ -663,6 +719,14 @@ export async function updatePrimaryVehicleRecord(currentVehicle, updates) {
       ),
     ),
     plate: updates.plate.trim().toUpperCase() || currentVehicle.plate,
+    purchaseDate:
+      updates.purchaseDate !== undefined && updates.purchaseDate !== ''
+        ? updates.purchaseDate
+        : currentVehicle.purchaseDate || null,
+    exShowroomPrice:
+      updates.exShowroomPrice !== undefined && updates.exShowroomPrice !== ''
+        ? Math.max(0, Number(updates.exShowroomPrice) || 0)
+        : currentVehicle.exShowroomPrice || 0,
     status: updates.status || currentVehicle.status,
     fuelType: updates.fuelType || currentVehicle.fuelType || 'Petrol (E10)',
     mileage:
@@ -693,12 +757,14 @@ export async function updatePrimaryVehicleRecord(currentVehicle, updates) {
       type: mergedVehicle.subType,
       status: mergedVehicle.status,
       fuel_type: mergedVehicle.fuelType,
+      purchase_date: mergedVehicle.purchaseDate || null,
+      ex_showroom_price: mergedVehicle.exShowroomPrice || 0,
       mileage: mergedVehicle.mileage,
       fuel_level: mergedVehicle.fuelLevel,
     })
     .eq('id', currentVehicle.dbId)
     .select(
-      'id, vehicle_code, name, brand, model, category, sub_type, engine_cc, top_speed, fuel_type, plate, driver, status, mileage, fuel_level, last_service, next_service',
+      'id, vehicle_code, name, brand, model, category, sub_type, engine_cc, top_speed, fuel_type, purchase_date, ex_showroom_price, plate, driver, status, mileage, fuel_level, last_service, next_service',
     )
     .single()
 
@@ -1213,6 +1279,7 @@ export async function upsertVehicleDocumentRecord(primaryVehicle, docInput) {
     docNumber: (docInput.docNumber || '').trim(),
     issuer: (docInput.issuer || '').trim(),
     issueDate: docInput.issueDate || '',
+    durationYears: Number(docInput.durationYears) || 1,
     expiryDate: docInput.expiryDate,
     maxOdometerKm: docInput.maxOdometerKm
       ? Number(docInput.maxOdometerKm)
@@ -1240,6 +1307,7 @@ export async function upsertVehicleDocumentRecord(primaryVehicle, docInput) {
           doc_number: localDoc.docNumber,
           issuer: localDoc.issuer,
           issue_date: localDoc.issueDate || null,
+          duration_years: localDoc.durationYears,
           expiry_date: localDoc.expiryDate,
           max_odometer_km: localDoc.maxOdometerKm,
           amount_paid: localDoc.amountPaid,
@@ -1265,6 +1333,7 @@ export async function upsertVehicleDocumentRecord(primaryVehicle, docInput) {
           doc_number: localDoc.docNumber,
           issuer: localDoc.issuer,
           issue_date: localDoc.issueDate || null,
+          duration_years: localDoc.durationYears,
           expiry_date: localDoc.expiryDate,
           max_odometer_km: localDoc.maxOdometerKm,
           amount_paid: localDoc.amountPaid,
@@ -1312,6 +1381,13 @@ export async function createServiceReminderRecord(
     vehicleCode: primaryVehicle.id || 'VH-001',
     title: (reminderInput.title || '').trim() || 'Service Reminder',
     serviceType: reminderInput.serviceType || 'Free Service',
+    dueDateFrom: reminderInput.dueDateFrom || '',
+    durationDaysMin: reminderInput.durationDaysMin
+      ? Number(reminderInput.durationDaysMin)
+      : null,
+    durationDaysMax: reminderInput.durationDaysMax
+      ? Number(reminderInput.durationDaysMax)
+      : null,
     dueDate: reminderInput.dueDate || '',
     dueDateEnd: reminderInput.dueDateEnd || '',
     dueOdometerKm: reminderInput.dueOdometerKm
@@ -1341,6 +1417,9 @@ export async function createServiceReminderRecord(
         vehicle_code: primaryVehicle.id || 'VH-001',
         title: localReminder.title,
         service_type: localReminder.serviceType,
+        due_date_from: localReminder.dueDateFrom || null,
+        duration_days_min: localReminder.durationDaysMin,
+        duration_days_max: localReminder.durationDaysMax,
         due_date: localReminder.dueDate || null,
         due_date_end: localReminder.dueDateEnd || null,
         due_odometer_km: localReminder.dueOdometerKm,

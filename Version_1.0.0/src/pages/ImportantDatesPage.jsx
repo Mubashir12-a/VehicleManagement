@@ -11,6 +11,7 @@ import {
   Trash2,
 } from 'lucide-react'
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import PageHeader from '../components/common/PageHeader'
 import AddReminderModal from '../components/dates/AddReminderModal'
 import CompleteServiceModal from '../components/dates/CompleteServiceModal'
@@ -35,8 +36,17 @@ export default function ImportantDatesPage() {
     deleteServiceReminder,
   } = useFleetData()
 
-  // Tab State: 'documents' | 'reminders' | 'history'
-  const [activeTab, setActiveTab] = useState('documents')
+  // Tab State: derived directly from URL searchParams ('documents' | 'reminders' | 'history')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const rawTab = searchParams.get('tab')
+  const activeTab =
+    rawTab && ['documents', 'reminders', 'history'].includes(rawTab)
+      ? rawTab
+      : 'documents'
+
+  const handleSelectTab = (tab) => {
+    setSearchParams({ tab })
+  }
 
   // Modals state
   const [docModalState, setDocModalState] = useState({ isOpen: false, doc: null })
@@ -60,6 +70,15 @@ export default function ImportantDatesPage() {
     0,
   )
 
+  const totalDocumentSpend = vehicleDocuments.reduce(
+    (sum, d) => sum + (Number(d.amountPaid) || 0),
+    0,
+  )
+
+  const paidDocsCount = vehicleDocuments.filter(
+    (d) => Number(d.amountPaid) > 0,
+  ).length
+
   const expiredDocsCount = vehicleDocuments.filter(
     (d) => getExpiryMeta(d.expiryDate).status === 'Expired',
   ).length
@@ -81,13 +100,15 @@ export default function ImportantDatesPage() {
       isOpen: true,
       doc: {
         id: `NEW-${Date.now()}`,
-        docType: 'other',
-        title: '',
-        docNumber: '',
-        issuer: '',
-        issueDate: '',
+        docType: 'insurance_comprehensive',
+        title: 'Comprehensive Insurance (Own Damage)',
+        docNumber: 'ABC-00000',
+        issuer: 'Official Provider',
+        issueDate: new Date().toISOString().split('T')[0],
+        durationYears: 1,
         expiryDate: '',
         maxOdometerKm: null,
+        amountPaid: 0,
         notes: '',
       },
     })
@@ -138,11 +159,10 @@ export default function ImportantDatesPage() {
         actions={
           <div className="flex flex-wrap items-center gap-2.5">
             <span
-              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
-                source === 'supabase'
+              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${source === 'supabase'
                   ? 'border border-lime-400/30 bg-lime-400/10 text-lime-300 shadow-[0_0_12px_rgba(163,230,53,0.18)]'
                   : 'border border-amber-400/30 bg-amber-400/10 text-amber-300'
-              }`}
+                }`}
             >
               <Database className="h-3.5 w-3.5" />
               {source === 'supabase' ? 'Supabase Connected' : 'Local Storage Mode'}
@@ -165,7 +185,7 @@ export default function ImportantDatesPage() {
       />
 
       {/* Overview Stat Cards */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:gap-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 lg:gap-4">
         {/* Documents Metric */}
         <div className="rounded-2xl border border-white/8 bg-[#12161c] p-4">
           <div className="flex items-center justify-between">
@@ -194,6 +214,28 @@ export default function ImportantDatesPage() {
             ) : (
               <span className="font-semibold text-lime-400">All valid</span>
             )}
+          </div>
+        </div>
+
+        {/* Document Spend Metric */}
+        <div className="rounded-2xl border border-white/8 bg-[#12161c] p-4">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">
+              Document Spend
+            </span>
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-lime-400/10 text-lime-400">
+              <IndianRupee className="h-4 w-4" />
+            </div>
+          </div>
+          <div className="mt-2 flex items-baseline gap-1">
+            <span className="font-mono text-2xl font-black text-lime-400">
+              ₹{totalDocumentSpend.toLocaleString('en-IN')}
+            </span>
+          </div>
+          <div className="mt-2 text-[11px] text-zinc-400 truncate">
+            {paidDocsCount > 0
+              ? `Across ${paidDocsCount} paid policies`
+              : 'Insurance, RC & permits'}
           </div>
         </div>
 
@@ -270,21 +312,19 @@ export default function ImportantDatesPage() {
       <div className="flex items-center gap-2 border-b border-white/8 pb-3">
         <button
           type="button"
-          onClick={() => setActiveTab('documents')}
-          className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all ${
-            activeTab === 'documents'
+          onClick={() => handleSelectTab('documents')}
+          className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all ${activeTab === 'documents'
               ? 'bg-lime-400 text-zinc-950 shadow-[0_0_16px_rgba(163,230,53,0.25)]'
               : 'bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white'
-          }`}
+            }`}
         >
           <FileText className="h-4 w-4" />
           Document Expiry
           <span
-            className={`rounded-full px-1.5 py-0.2 text-[10px] font-extrabold ${
-              activeTab === 'documents'
+            className={`rounded-full px-1.5 py-0.2 text-[10px] font-extrabold ${activeTab === 'documents'
                 ? 'bg-black/20 text-zinc-950'
                 : 'bg-white/10 text-zinc-300'
-            }`}
+              }`}
           >
             {vehicleDocuments.length}
           </span>
@@ -292,22 +332,20 @@ export default function ImportantDatesPage() {
 
         <button
           type="button"
-          onClick={() => setActiveTab('reminders')}
-          className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all ${
-            activeTab === 'reminders'
+          onClick={() => handleSelectTab('reminders')}
+          className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all ${activeTab === 'reminders'
               ? 'bg-lime-400 text-zinc-950 shadow-[0_0_16px_rgba(163,230,53,0.25)]'
               : 'bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white'
-          }`}
+            }`}
         >
           <CalendarClock className="h-4 w-4" />
           Service Reminders
           {activeReminders.length > 0 && (
             <span
-              className={`rounded-full px-1.5 py-0.2 text-[10px] font-extrabold ${
-                activeTab === 'reminders'
+              className={`rounded-full px-1.5 py-0.2 text-[10px] font-extrabold ${activeTab === 'reminders'
                   ? 'bg-black/20 text-zinc-950'
                   : 'bg-lime-400/20 text-lime-300'
-              }`}
+                }`}
             >
               {activeReminders.length}
             </span>
@@ -316,22 +354,20 @@ export default function ImportantDatesPage() {
 
         <button
           type="button"
-          onClick={() => setActiveTab('history')}
-          className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all ${
-            activeTab === 'history'
+          onClick={() => handleSelectTab('history')}
+          className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all ${activeTab === 'history'
               ? 'bg-lime-400 text-zinc-950 shadow-[0_0_16px_rgba(163,230,53,0.25)]'
               : 'bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white'
-          }`}
+            }`}
         >
           <History className="h-4 w-4" />
           Service History & Bills
           {completedReminders.length > 0 && (
             <span
-              className={`rounded-full px-1.5 py-0.2 text-[10px] font-extrabold ${
-                activeTab === 'history'
+              className={`rounded-full px-1.5 py-0.2 text-[10px] font-extrabold ${activeTab === 'history'
                   ? 'bg-black/20 text-zinc-950'
                   : 'bg-white/10 text-zinc-300'
-              }`}
+                }`}
             >
               {completedReminders.length}
             </span>
@@ -351,14 +387,21 @@ export default function ImportantDatesPage() {
                 Live validity countdown for Insurance, RC, PUC, Warranty, and permits
               </p>
             </div>
-            <button
-              type="button"
-              onClick={handleOpenAddDoc}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-zinc-200 hover:bg-white/10"
-            >
-              <Plus className="h-3.5 w-3.5 text-lime-400" />
-              Add Another Document
-            </button>
+            <div className="flex items-center gap-2.5">
+              {totalDocumentSpend > 0 && (
+                <span className="inline-flex items-center gap-1.5 rounded-xl border border-lime-400/20 bg-lime-400/10 px-3 py-1.5 text-xs font-semibold text-lime-300">
+                  Total Fees: <strong className="font-mono text-white">₹{totalDocumentSpend.toLocaleString('en-IN')}</strong>
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={handleOpenAddDoc}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-zinc-200 hover:bg-white/10"
+              >
+                <Plus className="h-3.5 w-3.5 text-lime-400" />
+                Add Another Document
+              </button>
+            </div>
           </div>
 
           {vehicleDocuments.length === 0 ? (
@@ -379,7 +422,7 @@ export default function ImportantDatesPage() {
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 items-stretch">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-5 items-stretch">
               {vehicleDocuments.map((doc) => (
                 <DocumentCard
                   key={doc.id}
@@ -577,3 +620,4 @@ export default function ImportantDatesPage() {
     </div>
   )
 }
+

@@ -23,6 +23,8 @@ create table if not exists public.vehicles (
   mileage integer not null default 0 check (mileage >= 0),
   fuel_level integer not null default 100 check (fuel_level between 0 and 100),
   top_speed integer not null default 150 check (top_speed >= 0),
+  purchase_date date default '2024-01-15',
+  ex_showroom_price numeric default 0,
   last_service date,
   next_service text,
   created_at timestamptz not null default now()
@@ -36,6 +38,8 @@ alter table public.vehicles add column if not exists sub_type text not null defa
 alter table public.vehicles add column if not exists engine_cc integer not null default 110;
 alter table public.vehicles add column if not exists top_speed integer not null default 150;
 alter table public.vehicles add column if not exists fuel_type text not null default 'Petrol (E10)';
+alter table public.vehicles add column if not exists purchase_date date default '2024-01-15';
+alter table public.vehicles add column if not exists ex_showroom_price numeric default 0;
 
 -- Enforce only 2 categories: Two Wheeler & Four Wheeler
 alter table public.vehicles drop constraint if exists vehicles_category_check;
@@ -324,6 +328,7 @@ create table if not exists public.vehicle_documents (
   issuer text,
   issue_date date,
   expiry_date date not null,
+  duration_years numeric(5, 2) default 1,
   max_odometer_km integer,
   amount_paid numeric(10, 2) not null default 0 check (amount_paid >= 0),
   notes text,
@@ -340,6 +345,9 @@ create table if not exists public.service_reminders (
   vehicle_code text not null references public.vehicles(vehicle_code) on delete cascade,
   title text not null,
   service_type text not null default 'Free Service',
+  due_date_from date,
+  duration_days_min integer,
+  duration_days_max integer,
   due_date date,
   due_date_end date,
   due_odometer_km integer,

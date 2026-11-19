@@ -1,7 +1,8 @@
-import { Database, RefreshCw } from 'lucide-react'
-import { useState } from 'react'
+import { ArrowRight, Bell, Database, RefreshCw } from 'lucide-react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import PageHeader from '../components/common/PageHeader'
+import { getReminderStatus } from '../components/dates/datesUtils'
 import FuelAndMileageChart from '../components/dashboard/FuelAndMileageChart'
 import MaintenanceHealthCard from '../components/dashboard/MaintenanceHealthCard'
 import MonthlyFuelCard from '../components/dashboard/MonthlyFuelCard'
@@ -16,8 +17,10 @@ export default function DashboardPage() {
     monthlyTrends,
     summary,
     latestRefill,
+    fuelRefills = [],
     maintenanceItems,
     componentServiceLogs = [],
+    serviceReminders = [],
     monthlyFuelSummary,
     loading,
     source,
@@ -31,6 +34,17 @@ export default function DashboardPage() {
   } = useFleetData()
 
   const [isFuelModalOpen, setIsFuelModalOpen] = useState(false)
+
+  const currentOdo = Number(primaryVehicle?.mileage) || 0
+  const dueServiceReminders = useMemo(() => {
+    return (serviceReminders || [])
+      .filter((r) => r.status !== 'Completed')
+      .map((r) => ({
+        ...r,
+        meta: getReminderStatus(r, currentOdo),
+      }))
+      .filter((r) => r.meta.isDue)
+  }, [serviceReminders, currentOdo])
 
   return (
     <div className="space-y-6">
@@ -88,6 +102,40 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* Service Milestone Due Reminder Alert Banner */}
+      {dueServiceReminders.length > 0 && (
+        <div className="flex flex-col gap-3 rounded-2xl border border-amber-400/40 bg-linear-to-r from-amber-500/15 via-[#1a1409] to-[#12161c] p-4 text-xs text-amber-200 shadow-[0_0_24px_rgba(251,191,36,0.12)] sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-400/20 text-amber-300 ring-1 ring-amber-400/40">
+              <Bell className="h-5 w-5 animate-bounce" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-white">
+                Service Reminder Alert: {dueServiceReminders.length} service
+                {dueServiceReminders.length > 1 ? 's' : ''} reached milestone
+              </p>
+              <p className="mt-0.5 text-zinc-300">
+                {dueServiceReminders
+                  .map(
+                    (r) =>
+                      `${r.title} (${r.meta.label}): ${
+                        r.meta.reasons.join(', ') || 'threshold reached'
+                      }`,
+                  )
+                  .join(' • ')}
+              </p>
+            </div>
+          </div>
+          <Link
+            to="/important-dates?tab=reminders"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-lime-400 px-3.5 py-2 font-bold text-zinc-950 transition-colors hover:bg-lime-300"
+          >
+            <span>View Reminders</span>
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+      )}
+
       {/* 1. Main Dashboard Card: Matching reference layout (NS400z / Brand / Halo / 2x2 Telemetry) */}
       <VehicleHeroCard
         vehicle={primaryVehicle}
@@ -119,7 +167,11 @@ export default function DashboardPage() {
       />
 
       {/* 5. Monthly Distance & Fuel Trend */}
-      <FuelAndMileageChart data={monthlyTrends} />
+      <FuelAndMileageChart
+        fuelRefills={fuelRefills}
+        vehicle={primaryVehicle}
+        fallbackData={monthlyTrends}
+      />
 
       {/* Quick Add Fuel Refill Modal */}
       <FuelRefillModal

@@ -1,7 +1,9 @@
 import {
+  Bell,
   Calendar,
   Check,
   CheckCircle2,
+  Clock,
   Gauge,
   MapPin,
   Trash2,
@@ -19,25 +21,54 @@ export default function ServiceReminderCard({
   const isCompleted = reminder.status === 'Completed'
 
   // Odo window text
-  const minOdo = reminder.dueOdometerKm
+  const minOdo = reminder.dueOdometerKm ? Number(reminder.dueOdometerKm) : null
   const maxOdo = reminder.dueOdometerMaxKm
+    ? Number(reminder.dueOdometerMaxKm)
+    : minOdo
+
   let odoText = 'No Odo Set'
-  if (minOdo && maxOdo) {
+  if (minOdo && maxOdo && minOdo !== maxOdo) {
     odoText = `${minOdo.toLocaleString('en-IN')} - ${maxOdo.toLocaleString('en-IN')} km`
   } else if (minOdo) {
     odoText = `${minOdo.toLocaleString('en-IN')} km`
   }
 
+  // Duration window text
+  const minDays = reminder.durationDaysMin ? Number(reminder.durationDaysMin) : null
+  const maxDays = reminder.durationDaysMax
+    ? Number(reminder.durationDaysMax)
+    : minDays
+
+  let durationText = null
+  if (minDays && maxDays && minDays !== maxDays) {
+    durationText = `${minDays} - ${maxDays} days`
+  } else if (minDays) {
+    durationText = `${minDays} days`
+  }
+
   // Distance calculation
   let distanceMessage = null
-  if (!isCompleted && minOdo) {
+  if (!isCompleted && minOdo !== null) {
     const diff = minOdo - currentOdo
     if (diff > 0) {
-      distanceMessage = `${diff.toLocaleString('en-IN')} km left until service window`
+      distanceMessage = `${diff.toLocaleString('en-IN')} km left until min target`
     } else if (maxOdo && currentOdo <= maxOdo) {
       distanceMessage = `Within target window (current: ${currentOdo.toLocaleString('en-IN')} km)`
     } else {
       distanceMessage = `Exceeded target by ${Math.abs(currentOdo - (maxOdo || minOdo)).toLocaleString('en-IN')} km`
+    }
+  }
+
+  // Duration calculation
+  let durationMessage = null
+  if (!isCompleted && statusMeta.elapsedDays !== null && minDays !== null) {
+    const passed = statusMeta.elapsedDays
+    const daysLeft = minDays - passed
+    if (daysLeft > 0) {
+      durationMessage = `${daysLeft} days left (${passed}d passed since start)`
+    } else {
+      const daysOver = passed - minDays
+      durationMessage = `Duration reached min (${passed}d passed, +${daysOver}d)`
     }
   }
 
@@ -46,10 +77,10 @@ export default function ServiceReminderCard({
       className={`flex h-full flex-col justify-between rounded-2xl border p-5 transition-all duration-300 ${
         isCompleted
           ? 'border-white/6 bg-[#0f1216] opacity-90'
-          : statusMeta.color === 'amber'
-            ? 'border-amber-400/30 bg-[#12161c] shadow-[0_0_20px_rgba(251,191,36,0.06)]'
-            : statusMeta.color === 'rose'
-              ? 'border-rose-500/30 bg-[#12161c] shadow-[0_0_20px_rgba(244,63,94,0.06)]'
+          : statusMeta.color === 'rose'
+            ? 'border-rose-500/40 bg-[#12161c] shadow-[0_0_24px_rgba(244,63,94,0.08)]'
+            : statusMeta.color === 'amber'
+              ? 'border-amber-400/40 bg-[#12161c] shadow-[0_0_24px_rgba(251,191,36,0.08)]'
               : 'border-white/8 bg-[#12161c] hover:border-lime-400/20'
       }`}
     >
@@ -61,7 +92,9 @@ export default function ServiceReminderCard({
               className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ring-1 ${
                 isCompleted
                   ? 'bg-lime-400/10 text-lime-400 ring-lime-400/20'
-                  : 'bg-white/5 text-zinc-300 ring-white/10'
+                  : statusMeta.isDue
+                    ? 'bg-amber-400/15 text-amber-300 ring-amber-400/30'
+                    : 'bg-white/5 text-zinc-300 ring-white/10'
               }`}
             >
               {isCompleted ? (
@@ -89,7 +122,7 @@ export default function ServiceReminderCard({
 
         {/* Targets Grid */}
         {!isCompleted ? (
-          <div className="mt-4 space-y-2">
+          <div className="mt-4 space-y-2.5">
             <div className="grid grid-cols-2 gap-2 rounded-xl border border-white/6 bg-black/40 p-3 text-xs">
               <div>
                 <span className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-zinc-500">
@@ -102,19 +135,65 @@ export default function ServiceReminderCard({
 
               <div>
                 <span className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-zinc-500">
-                  <Calendar className="h-3 w-3 text-lime-400" /> Target Window
+                  <Clock className="h-3 w-3 text-lime-400" /> Duration Window
                 </span>
                 <span className="mt-1 block font-mono text-[11px] font-bold text-zinc-300">
-                  {reminder.dueDate || 'Flexible'}
-                  {reminder.dueDateEnd ? ` to ${reminder.dueDateEnd}` : ''}
+                  {durationText || 'Flexible'}
                 </span>
+                {reminder.dueDateFrom && (
+                  <span className="text-[10px] text-zinc-500">
+                    from {reminder.dueDateFrom}
+                  </span>
+                )}
               </div>
             </div>
 
-            {distanceMessage && (
-              <p className="text-[11px] font-medium text-zinc-400">
-                • {distanceMessage}
-              </p>
+            {/* Target Date Range */}
+            {(reminder.dueDate || reminder.dueDateEnd) && (
+              <div className="flex items-center justify-between rounded-xl border border-white/6 bg-white/2 px-3 py-1.5 text-xs">
+                <span className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-zinc-500">
+                  <Calendar className="h-3 w-3 text-lime-400" /> Target Date:
+                </span>
+                <span className="font-mono text-[11px] font-bold text-zinc-200">
+                  {reminder.dueDate || 'Flexible'}
+                  {reminder.dueDateEnd && reminder.dueDateEnd !== reminder.dueDate
+                    ? ` to ${reminder.dueDateEnd}`
+                    : ''}
+                </span>
+              </div>
+            )}
+
+            {/* Due Trigger Reasons Notification Box */}
+            {statusMeta.reasons && statusMeta.reasons.length > 0 && (
+              <div
+                className={`rounded-xl border p-2.5 text-xs ${
+                  statusMeta.isOverdue
+                    ? 'border-rose-500/30 bg-rose-500/10 text-rose-300'
+                    : 'border-amber-400/30 bg-amber-400/10 text-amber-200'
+                }`}
+              >
+                <div className="flex items-center gap-1.5 font-bold">
+                  <Bell className="h-3.5 w-3.5" />
+                  <span>
+                    {statusMeta.isOverdue
+                      ? 'Overdue Trigger:'
+                      : 'Service Milestone Reached:'}
+                  </span>
+                </div>
+                <ul className="mt-1 space-y-0.5 pl-4 list-disc text-[11px]">
+                  {statusMeta.reasons.map((reason, idx) => (
+                    <li key={idx}>{reason}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Distance / Duration status text */}
+            {!statusMeta.isDue && (
+              <div className="space-y-1 text-[11px] text-zinc-400 font-medium">
+                {distanceMessage && <p>• {distanceMessage}</p>}
+                {durationMessage && <p>• {durationMessage}</p>}
+              </div>
             )}
 
             {reminder.notes && (
