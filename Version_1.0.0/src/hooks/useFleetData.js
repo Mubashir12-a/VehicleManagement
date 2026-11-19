@@ -7,9 +7,13 @@ import {
   useState,
 } from 'react'
 import {
+  defaultComponentServiceLogs,
   defaultFuelRefills,
   defaultMaintenanceItems,
+  defaultServiceReminders,
   defaultVehicle,
+  defaultVehicleDocuments,
+  defaultVehicleRepairs,
   fleetStatusData as mockStatusData,
   fleetSummary as mockSummary,
   maintenanceSchedule as mockMaintenance,
@@ -18,14 +22,23 @@ import {
   vehiclesList as mockVehicles,
 } from '../data/mockFleetData'
 import {
+  completeServiceReminderRecord,
   computeFleetAnalytics,
   computeMonthlyFuelSummary,
+  createComponentServiceLogRecord,
   createFuelRefillRecord,
+  createServiceReminderRecord,
+  createVehicleRepairRecord,
+  deleteComponentServiceLogRecord,
   deleteFuelRefillRecord,
+  deleteServiceReminderRecord,
+  deleteVehicleDocumentRecord,
+  deleteVehicleRepairRecord,
   fetchFleetData,
   updateFuelRefillRecord,
   updateMaintenanceHealthItem,
   updatePrimaryVehicleRecord,
+  upsertVehicleDocumentRecord,
 } from '../services/fleetService'
 
 const defaultFallback = {
@@ -39,6 +52,10 @@ const defaultFallback = {
   monthlyTrends: mockMonthlyTrends,
   fuelRefills: defaultFuelRefills,
   maintenanceItems: defaultMaintenanceItems,
+  componentServiceLogs: defaultComponentServiceLogs,
+  vehicleRepairs: defaultVehicleRepairs,
+  vehicleDocuments: defaultVehicleDocuments,
+  serviceReminders: defaultServiceReminders,
   summary: mockSummary,
   monthlyFuelSummary: computeMonthlyFuelSummary(defaultFuelRefills),
   statusData: mockStatusData,
@@ -52,6 +69,15 @@ const defaultFallback = {
   editFuelRefill: async () => {},
   deleteFuelRefill: async () => {},
   updateMaintenanceItem: async () => {},
+  addComponentServiceLog: async () => {},
+  deleteComponentServiceLog: async () => {},
+  addVehicleRepair: async () => {},
+  deleteVehicleRepair: async () => {},
+  upsertVehicleDocument: async () => {},
+  deleteVehicleDocument: async () => {},
+  addServiceReminder: async () => {},
+  completeServiceReminder: async () => {},
+  deleteServiceReminder: async () => {},
 }
 
 const FleetContext = createContext(defaultFallback)
@@ -68,6 +94,10 @@ function useProvideFleetData() {
     monthlyTrends: mockMonthlyTrends,
     fuelRefills: defaultFuelRefills,
     maintenanceItems: defaultMaintenanceItems,
+    componentServiceLogs: defaultComponentServiceLogs,
+    vehicleRepairs: defaultVehicleRepairs,
+    vehicleDocuments: defaultVehicleDocuments,
+    serviceReminders: defaultServiceReminders,
     summary: mockSummary,
     monthlyFuelSummary: computeMonthlyFuelSummary(defaultFuelRefills),
     statusData: mockStatusData,
@@ -241,6 +271,175 @@ function useProvideFleetData() {
     return result
   }, [])
 
+  const addComponentServiceLog = useCallback(
+    async (item, logInput) => {
+      const result = await createComponentServiceLogRecord(
+        primaryVehicle,
+        item,
+        logInput,
+      )
+      setState((prev) => {
+        const nextLogs = [result.log, ...(prev.componentServiceLogs || [])]
+        const nextItems = prev.maintenanceItems.map((existing) =>
+          existing.itemKey === item.itemKey ? result.item : existing,
+        )
+        return {
+          ...prev,
+          componentServiceLogs: nextLogs,
+          maintenanceItems: nextItems,
+        }
+      })
+      return result
+    },
+    [primaryVehicle],
+  )
+
+  const deleteComponentServiceLog = useCallback(
+    async (logId, itemKey) => {
+      const allItemLogs = state.componentServiceLogs || []
+      const result = await deleteComponentServiceLogRecord(
+        primaryVehicle,
+        logId,
+        itemKey,
+        allItemLogs,
+      )
+      setState((prev) => {
+        const nextLogs = (prev.componentServiceLogs || []).filter(
+          (l) => l.id !== logId,
+        )
+        const nextItems = prev.maintenanceItems.map((existing) =>
+          existing.itemKey === itemKey
+            ? { ...existing, lastServiceOdo: result.newLastOdo }
+            : existing,
+        )
+        return {
+          ...prev,
+          componentServiceLogs: nextLogs,
+          maintenanceItems: nextItems,
+        }
+      })
+      return result
+    },
+    [primaryVehicle, state.componentServiceLogs],
+  )
+
+  const addVehicleRepair = useCallback(
+    async (repairInput) => {
+      const result = await createVehicleRepairRecord(
+        primaryVehicle,
+        repairInput,
+      )
+      setState((prev) => {
+        const nextRepairs = [result.repair, ...(prev.vehicleRepairs || [])]
+        return {
+          ...prev,
+          vehicleRepairs: nextRepairs,
+        }
+      })
+      return result
+    },
+    [primaryVehicle],
+  )
+
+  const deleteVehicleRepair = useCallback(
+    async (repairId) => {
+      const result = await deleteVehicleRepairRecord(primaryVehicle, repairId)
+      setState((prev) => ({
+        ...prev,
+        vehicleRepairs: (prev.vehicleRepairs || []).filter(
+          (r) => r.id !== repairId,
+        ),
+      }))
+      return result
+    },
+    [primaryVehicle],
+  )
+
+  const upsertVehicleDocument = useCallback(
+    async (docInput) => {
+      const result = await upsertVehicleDocumentRecord(primaryVehicle, docInput)
+      setState((prev) => {
+        const existing = prev.vehicleDocuments || []
+        const exists = existing.some((d) => d.id === result.doc.id)
+        const nextDocs = exists
+          ? existing.map((d) => (d.id === result.doc.id ? result.doc : d))
+          : [...existing, result.doc]
+        return {
+          ...prev,
+          vehicleDocuments: nextDocs,
+        }
+      })
+      return result
+    },
+    [primaryVehicle],
+  )
+
+  const deleteVehicleDocument = useCallback(
+    async (docId) => {
+      const result = await deleteVehicleDocumentRecord(primaryVehicle, docId)
+      setState((prev) => ({
+        ...prev,
+        vehicleDocuments: (prev.vehicleDocuments || []).filter(
+          (d) => d.id !== docId,
+        ),
+      }))
+      return result
+    },
+    [primaryVehicle],
+  )
+
+  const addServiceReminder = useCallback(
+    async (reminderInput) => {
+      const result = await createServiceReminderRecord(
+        primaryVehicle,
+        reminderInput,
+      )
+      setState((prev) => ({
+        ...prev,
+        serviceReminders: [...(prev.serviceReminders || []), result.reminder],
+      }))
+      return result
+    },
+    [primaryVehicle],
+  )
+
+  const completeServiceReminder = useCallback(
+    async (reminderId, completionInput) => {
+      const result = await completeServiceReminderRecord(
+        primaryVehicle,
+        reminderId,
+        completionInput,
+      )
+      setState((prev) => ({
+        ...prev,
+        serviceReminders: (prev.serviceReminders || []).map((r) =>
+          r.id === reminderId
+            ? result.reminder || { ...r, ...result.updates }
+            : r,
+        ),
+      }))
+      return result
+    },
+    [primaryVehicle],
+  )
+
+  const deleteServiceReminder = useCallback(
+    async (reminderId) => {
+      const result = await deleteServiceReminderRecord(
+        primaryVehicle,
+        reminderId,
+      )
+      setState((prev) => ({
+        ...prev,
+        serviceReminders: (prev.serviceReminders || []).filter(
+          (r) => r.id !== reminderId,
+        ),
+      }))
+      return result
+    },
+    [primaryVehicle],
+  )
+
   return {
     ...state,
     primaryVehicle,
@@ -252,6 +451,15 @@ function useProvideFleetData() {
     editFuelRefill,
     deleteFuelRefill,
     updateMaintenanceItem,
+    addComponentServiceLog,
+    deleteComponentServiceLog,
+    addVehicleRepair,
+    deleteVehicleRepair,
+    upsertVehicleDocument,
+    deleteVehicleDocument,
+    addServiceReminder,
+    completeServiceReminder,
+    deleteServiceReminder,
   }
 }
 

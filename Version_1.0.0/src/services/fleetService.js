@@ -1,7 +1,11 @@
 import {
+  defaultComponentServiceLogs,
   defaultFuelRefills,
   defaultMaintenanceItems,
+  defaultServiceReminders,
   defaultVehicle,
+  defaultVehicleDocuments,
+  defaultVehicleRepairs,
   fleetStatusData as mockStatusData,
   fleetSummary as mockSummary,
   maintenanceSchedule as mockMaintenance,
@@ -60,9 +64,10 @@ function mapVehicleRow(row) {
     type: subType,
     driver: row.driver || 'Owner',
     status: row.status || 'Active',
+    fuelType: row.fuel_type || defaultVehicle.fuelType || 'Petrol (E10)',
     mileage: Number(row.mileage) || 0,
-    topSpeed: Number(row.top_speed) || defaultVehicle.topSpeed || 150,
-    speed: Number(row.top_speed) || defaultVehicle.topSpeed || 150,
+    topSpeed: Number(row.top_speed) || defaultVehicle.topSpeed || 0,
+    speed: Number(row.top_speed) || defaultVehicle.topSpeed || 0,
     fuelLevel: Number(row.fuel_level) || 0,
     lastService: row.last_service || '—',
     nextService: row.next_service || '—',
@@ -124,6 +129,75 @@ function mapMaintenanceItemRow(row) {
     intervalKm: Number(row.interval_km) || 1000,
     lastServiceOdo: Number(row.last_service_odo) || 0,
     sortOrder: Number(row.sort_order) || 0,
+  }
+}
+
+function mapComponentServiceLogRow(row) {
+  return {
+    id: row.id,
+    vehicleCode: row.vehicle_code,
+    itemKey: row.item_key,
+    serviceDate: row.service_date,
+    odometerKm: Number(row.odometer_km) || 0,
+    cost: Number(row.cost) || 0,
+    notes: row.notes || '',
+    createdAt: row.created_at,
+  }
+}
+
+function mapVehicleRepairRow(row) {
+  return {
+    id: row.id,
+    vehicleCode: row.vehicle_code,
+    repairTitle: row.repair_title,
+    category: row.category || 'Repair',
+    repairDate: row.repair_date,
+    odometerKm: Number(row.odometer_km) || 0,
+    cost: Number(row.cost) || 0,
+    garageName: row.garage_name || '',
+    notes: row.notes || '',
+    createdAt: row.created_at,
+  }
+}
+
+function mapVehicleDocumentRow(row) {
+  return {
+    id: row.id,
+    vehicleCode: row.vehicle_code,
+    docType: row.doc_type,
+    title: row.title,
+    docNumber: row.doc_number || '',
+    issuer: row.issuer || '',
+    issueDate: row.issue_date || '',
+    expiryDate: row.expiry_date,
+    maxOdometerKm: row.max_odometer_km ? Number(row.max_odometer_km) : null,
+    notes: row.notes || '',
+    createdAt: row.created_at,
+  }
+}
+
+function mapServiceReminderRow(row) {
+  return {
+    id: row.id,
+    vehicleCode: row.vehicle_code,
+    title: row.title,
+    serviceType: row.service_type || 'Free Service',
+    dueDate: row.due_date || '',
+    dueDateEnd: row.due_date_end || '',
+    dueOdometerKm: row.due_odometer_km ? Number(row.due_odometer_km) : null,
+    dueOdometerMaxKm: row.due_odometer_max_km
+      ? Number(row.due_odometer_max_km)
+      : null,
+    status: row.status || 'Pending',
+    completedDate: row.completed_date || '',
+    completedOdometerKm: row.completed_odometer_km
+      ? Number(row.completed_odometer_km)
+      : null,
+    amountPaid: Number(row.amount_paid) || 0,
+    serviceCenter: row.service_center || '',
+    invoiceNo: row.invoice_no || '',
+    notes: row.notes || '',
+    createdAt: row.created_at,
   }
 }
 
@@ -361,6 +435,10 @@ export async function fetchFleetData() {
     monthlyTrends: mockMonthlyTrends,
     fuelRefills: defaultFuelRefills,
     maintenanceItems: defaultMaintenanceItems,
+    componentServiceLogs: defaultComponentServiceLogs,
+    vehicleRepairs: defaultVehicleRepairs,
+    vehicleDocuments: defaultVehicleDocuments,
+    serviceReminders: defaultServiceReminders,
     summary: mockSummary,
     monthlyFuelSummary: computeMonthlyFuelSummary(defaultFuelRefills),
     statusData: mockStatusData,
@@ -379,11 +457,15 @@ export async function fetchFleetData() {
       monthlyRes,
       refillsRes,
       healthItemsRes,
+      serviceLogsRes,
+      repairsRes,
+      docsRes,
+      remindersRes,
     ] = await Promise.all([
       supabase
         .from('vehicles')
         .select(
-          'id, vehicle_code, name, brand, model, category, sub_type, engine_cc, top_speed, plate, driver, status, mileage, fuel_level, last_service, next_service',
+          'id, vehicle_code, name, brand, model, category, sub_type, engine_cc, top_speed, fuel_type, plate, driver, status, mileage, fuel_level, last_service, next_service',
         )
         .order('created_at', { ascending: true })
         .limit(1),
@@ -404,6 +486,25 @@ export async function fetchFleetData() {
         .from('maintenance_items')
         .select('*')
         .order('sort_order', { ascending: true }),
+      supabase
+        .from('component_service_logs')
+        .select('*')
+        .order('service_date', { ascending: false })
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('vehicle_repairs')
+        .select('*')
+        .order('repair_date', { ascending: false })
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('vehicle_documents')
+        .select('*')
+        .order('expiry_date', { ascending: true }),
+      supabase
+        .from('service_reminders')
+        .select('*')
+        .order('status', { ascending: false })
+        .order('due_date', { ascending: true }),
     ])
 
     const coreError =
@@ -458,12 +559,43 @@ export async function fetchFleetData() {
     )
     const monthlyTrends = (monthlyRes.data || []).map(mapMonthlyRow)
 
-    const maintenanceItems =
+    const currentMileage = Number(primaryVehicle.mileage) || 0
+    const rawItems =
       !healthItemsRes.error && (healthItemsRes.data || []).length > 0
         ? healthItemsRes.data
             .filter((i) => i.vehicle_code === primaryCode)
             .map(mapMaintenanceItemRow)
         : defaultMaintenanceItems
+
+    const maintenanceItems = rawItems.map((item) => ({
+      ...item,
+      lastServiceOdo:
+        item.lastServiceOdo > currentMileage ? 0 : item.lastServiceOdo,
+    }))
+
+    const componentServiceLogs = !serviceLogsRes.error
+      ? (serviceLogsRes.data || [])
+          .filter((l) => l.vehicle_code === primaryCode)
+          .map(mapComponentServiceLogRow)
+      : defaultComponentServiceLogs
+
+    const vehicleRepairs = !repairsRes.error
+      ? (repairsRes.data || [])
+          .filter((r) => r.vehicle_code === primaryCode)
+          .map(mapVehicleRepairRow)
+      : defaultVehicleRepairs
+
+    const vehicleDocuments = !docsRes.error
+      ? (docsRes.data || [])
+          .filter((d) => d.vehicle_code === primaryCode)
+          .map(mapVehicleDocumentRow)
+      : defaultVehicleDocuments
+
+    const serviceReminders = !remindersRes.error
+      ? (remindersRes.data || [])
+          .filter((r) => r.vehicle_code === primaryCode)
+          .map(mapServiceReminderRow)
+      : defaultServiceReminders
 
     const analytics = computeFleetAnalytics(
       vehicles,
@@ -483,6 +615,10 @@ export async function fetchFleetData() {
         monthlyTrends.length > 0 ? monthlyTrends : mockMonthlyTrends,
       fuelRefills,
       maintenanceItems,
+      componentServiceLogs,
+      vehicleRepairs,
+      vehicleDocuments,
+      serviceReminders,
       ...analytics,
       error: null,
     }
@@ -516,22 +652,26 @@ export async function updatePrimaryVehicleRecord(currentVehicle, updates) {
     topSpeed: Math.max(
       0,
       Math.round(
-        Number(updates.topSpeed ?? updates.speed ?? currentVehicle.topSpeed) ||
-          150,
+        Number(updates.topSpeed ?? updates.speed ?? currentVehicle.topSpeed) || 0,
       ),
     ),
     speed: Math.max(
       0,
       Math.round(
-        Number(updates.topSpeed ?? updates.speed ?? currentVehicle.topSpeed) ||
-          150,
+        Number(updates.topSpeed ?? updates.speed ?? currentVehicle.topSpeed) || 0,
       ),
     ),
     plate: updates.plate.trim().toUpperCase() || currentVehicle.plate,
     status: updates.status || currentVehicle.status,
-    // Odometer is strictly derived from latest fuel refill (no manual edit)
-    mileage: currentVehicle.mileage,
-    fuelLevel: currentVehicle.fuelLevel,
+    fuelType: updates.fuelType || currentVehicle.fuelType || 'Petrol (E10)',
+    mileage:
+      updates.mileage !== undefined && updates.mileage !== ''
+        ? Math.max(0, Number(updates.mileage) || 0)
+        : currentVehicle.mileage,
+    fuelLevel:
+      updates.fuelLevel !== undefined && updates.fuelLevel !== ''
+        ? Math.min(100, Math.max(0, Number(updates.fuelLevel) || 0))
+        : currentVehicle.fuelLevel,
   }
 
   if (!isSupabaseConfigured || !supabase || !currentVehicle.dbId) {
@@ -551,12 +691,13 @@ export async function updatePrimaryVehicleRecord(currentVehicle, updates) {
       plate: mergedVehicle.plate,
       type: mergedVehicle.subType,
       status: mergedVehicle.status,
+      fuel_type: mergedVehicle.fuelType,
       mileage: mergedVehicle.mileage,
       fuel_level: mergedVehicle.fuelLevel,
     })
     .eq('id', currentVehicle.dbId)
     .select(
-      'id, vehicle_code, name, brand, model, category, sub_type, engine_cc, top_speed, plate, driver, status, mileage, fuel_level, last_service, next_service',
+      'id, vehicle_code, name, brand, model, category, sub_type, engine_cc, top_speed, fuel_type, plate, driver, status, mileage, fuel_level, last_service, next_service',
     )
     .single()
 
@@ -870,4 +1011,436 @@ export async function updateMaintenanceHealthItem(item, updates) {
   }
 
   return { item: mapMaintenanceItemRow(data), savedToSupabase: true }
+}
+
+export async function createComponentServiceLogRecord(
+  primaryVehicle,
+  item,
+  logInput,
+) {
+  const odoKm = Math.max(0, Number(logInput.odometerKm) || 0)
+  const cost = Math.max(0, Number(logInput.cost) || 0)
+  const serviceDate =
+    logInput.serviceDate || new Date().toISOString().split('T')[0]
+  const notes = (logInput.notes || '').trim()
+
+  const localLog = {
+    id: `CSL-${Date.now()}`,
+    vehicleCode: primaryVehicle.id || 'VH-001',
+    itemKey: item.itemKey,
+    serviceDate,
+    odometerKm: odoKm,
+    cost,
+    notes,
+    createdAt: new Date().toISOString(),
+  }
+
+  const updatedItem = {
+    ...item,
+    lastServiceOdo: odoKm,
+  }
+
+  if (!isSupabaseConfigured || !supabase) {
+    return { log: localLog, item: updatedItem, savedToSupabase: false }
+  }
+
+  try {
+    const { data: logData, error: logError } = await supabase
+      .from('component_service_logs')
+      .insert({
+        vehicle_code: primaryVehicle.id || 'VH-001',
+        item_key: item.itemKey,
+        service_date: serviceDate,
+        odometer_km: odoKm,
+        cost,
+        notes,
+      })
+      .select('*')
+      .single()
+
+    if (logError) {
+      console.warn('Failed to insert service log to Supabase:', logError.message)
+      return { log: localLog, item: updatedItem, savedToSupabase: false }
+    }
+
+    if (item.id && !String(item.id).startsWith('MI-')) {
+      await supabase
+        .from('maintenance_items')
+        .update({
+          last_service_odo: odoKm,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', item.id)
+    } else {
+      await supabase
+        .from('maintenance_items')
+        .update({
+          last_service_odo: odoKm,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('vehicle_code', primaryVehicle.id || 'VH-001')
+        .eq('item_key', item.itemKey)
+    }
+
+    return {
+      log: mapComponentServiceLogRow(logData),
+      item: updatedItem,
+      savedToSupabase: true,
+    }
+  } catch (err) {
+    console.error('Error in createComponentServiceLogRecord:', err)
+    return { log: localLog, item: updatedItem, savedToSupabase: false }
+  }
+}
+
+export async function deleteComponentServiceLogRecord(
+  primaryVehicle,
+  logId,
+  itemKey,
+  allItemLogs = [],
+) {
+  const remaining = allItemLogs.filter(
+    (l) => l.itemKey === itemKey && l.id !== logId,
+  )
+  const newLastOdo =
+    remaining.length > 0 ? Math.max(...remaining.map((l) => l.odometerKm)) : 0
+
+  if (!isSupabaseConfigured || !supabase || String(logId).startsWith('CSL-')) {
+    return { success: true, newLastOdo }
+  }
+
+  try {
+    await supabase.from('component_service_logs').delete().eq('id', logId)
+    await supabase
+      .from('maintenance_items')
+      .update({
+        last_service_odo: newLastOdo,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('vehicle_code', primaryVehicle.id || 'VH-001')
+      .eq('item_key', itemKey)
+
+    return { success: true, newLastOdo }
+  } catch (err) {
+    console.error('Error in deleteComponentServiceLogRecord:', err)
+    return { success: false, newLastOdo }
+  }
+}
+
+export async function createVehicleRepairRecord(primaryVehicle, repairInput) {
+  const odoKm = Math.max(0, Number(repairInput.odometerKm) || 0)
+  const cost = Math.max(0, Number(repairInput.cost) || 0)
+  const repairTitle = (repairInput.repairTitle || '').trim() || 'General Repair'
+  const category = repairInput.category || 'Repair'
+  const repairDate =
+    repairInput.repairDate || new Date().toISOString().split('T')[0]
+  const garageName = (repairInput.garageName || '').trim()
+  const notes = (repairInput.notes || '').trim()
+
+  const localRepair = {
+    id: `REP-${Date.now()}`,
+    vehicleCode: primaryVehicle.id || 'VH-001',
+    repairTitle,
+    category,
+    repairDate,
+    odometerKm: odoKm,
+    cost,
+    garageName,
+    notes,
+    createdAt: new Date().toISOString(),
+  }
+
+  if (!isSupabaseConfigured || !supabase) {
+    return { repair: localRepair, savedToSupabase: false }
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('vehicle_repairs')
+      .insert({
+        vehicle_code: primaryVehicle.id || 'VH-001',
+        repair_title: repairTitle,
+        category,
+        repair_date: repairDate,
+        odometer_km: odoKm,
+        cost,
+        garage_name: garageName,
+        notes,
+      })
+      .select('*')
+      .single()
+
+    if (error) {
+      console.warn('Failed to insert vehicle repair to Supabase:', error.message)
+      return { repair: localRepair, savedToSupabase: false }
+    }
+
+    return {
+      repair: mapVehicleRepairRow(data),
+      savedToSupabase: true,
+    }
+  } catch (err) {
+    console.error('Error in createVehicleRepairRecord:', err)
+    return { repair: localRepair, savedToSupabase: false }
+  }
+}
+
+export async function deleteVehicleRepairRecord(primaryVehicle, repairId) {
+  if (
+    !isSupabaseConfigured ||
+    !supabase ||
+    String(repairId).startsWith('REP-')
+  ) {
+    return { success: true }
+  }
+
+  try {
+    await supabase.from('vehicle_repairs').delete().eq('id', repairId)
+    return { success: true }
+  } catch (err) {
+    console.error('Error in deleteVehicleRepairRecord:', err)
+    return { success: false }
+  }
+}
+
+export async function upsertVehicleDocumentRecord(primaryVehicle, docInput) {
+  const localDoc = {
+    id: docInput.id || `DOC-${Date.now()}`,
+    vehicleCode: primaryVehicle.id || 'VH-001',
+    docType: docInput.docType || 'other',
+    title: (docInput.title || '').trim() || 'Document',
+    docNumber: (docInput.docNumber || '').trim(),
+    issuer: (docInput.issuer || '').trim(),
+    issueDate: docInput.issueDate || '',
+    expiryDate: docInput.expiryDate,
+    maxOdometerKm: docInput.maxOdometerKm
+      ? Number(docInput.maxOdometerKm)
+      : null,
+    notes: (docInput.notes || '').trim(),
+    createdAt: new Date().toISOString(),
+  }
+
+  if (!isSupabaseConfigured || !supabase) {
+    return { doc: localDoc, savedToSupabase: false }
+  }
+
+  try {
+    const isExisting =
+      docInput.id &&
+      !String(docInput.id).startsWith('DOC-')
+
+    if (isExisting) {
+      const { data, error } = await supabase
+        .from('vehicle_documents')
+        .update({
+          doc_type: localDoc.docType,
+          title: localDoc.title,
+          doc_number: localDoc.docNumber,
+          issuer: localDoc.issuer,
+          issue_date: localDoc.issueDate || null,
+          expiry_date: localDoc.expiryDate,
+          max_odometer_km: localDoc.maxOdometerKm,
+          notes: localDoc.notes,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', docInput.id)
+        .select('*')
+        .single()
+
+      if (error) {
+        console.warn('Failed to update vehicle document in Supabase:', error.message)
+        return { doc: localDoc, savedToSupabase: false }
+      }
+      return { doc: mapVehicleDocumentRow(data), savedToSupabase: true }
+    } else {
+      const { data, error } = await supabase
+        .from('vehicle_documents')
+        .insert({
+          vehicle_code: primaryVehicle.id || 'VH-001',
+          doc_type: localDoc.docType,
+          title: localDoc.title,
+          doc_number: localDoc.docNumber,
+          issuer: localDoc.issuer,
+          issue_date: localDoc.issueDate || null,
+          expiry_date: localDoc.expiryDate,
+          max_odometer_km: localDoc.maxOdometerKm,
+          notes: localDoc.notes,
+        })
+        .select('*')
+        .single()
+
+      if (error) {
+        console.warn('Failed to insert vehicle document to Supabase:', error.message)
+        return { doc: localDoc, savedToSupabase: false }
+      }
+      return { doc: mapVehicleDocumentRow(data), savedToSupabase: true }
+    }
+  } catch (err) {
+    console.error('Error in upsertVehicleDocumentRecord:', err)
+    return { doc: localDoc, savedToSupabase: false }
+  }
+}
+
+export async function deleteVehicleDocumentRecord(primaryVehicle, docId) {
+  if (
+    !isSupabaseConfigured ||
+    !supabase ||
+    String(docId).startsWith('DOC-')
+  ) {
+    return { success: true }
+  }
+
+  try {
+    await supabase.from('vehicle_documents').delete().eq('id', docId)
+    return { success: true }
+  } catch (err) {
+    console.error('Error in deleteVehicleDocumentRecord:', err)
+    return { success: false }
+  }
+}
+
+export async function createServiceReminderRecord(
+  primaryVehicle,
+  reminderInput,
+) {
+  const localReminder = {
+    id: `REM-${Date.now()}`,
+    vehicleCode: primaryVehicle.id || 'VH-001',
+    title: (reminderInput.title || '').trim() || 'Service Reminder',
+    serviceType: reminderInput.serviceType || 'Free Service',
+    dueDate: reminderInput.dueDate || '',
+    dueDateEnd: reminderInput.dueDateEnd || '',
+    dueOdometerKm: reminderInput.dueOdometerKm
+      ? Number(reminderInput.dueOdometerKm)
+      : null,
+    dueOdometerMaxKm: reminderInput.dueOdometerMaxKm
+      ? Number(reminderInput.dueOdometerMaxKm)
+      : null,
+    status: 'Pending',
+    completedDate: '',
+    completedOdometerKm: null,
+    amountPaid: 0,
+    serviceCenter: '',
+    invoiceNo: '',
+    notes: (reminderInput.notes || '').trim(),
+    createdAt: new Date().toISOString(),
+  }
+
+  if (!isSupabaseConfigured || !supabase) {
+    return { reminder: localReminder, savedToSupabase: false }
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('service_reminders')
+      .insert({
+        vehicle_code: primaryVehicle.id || 'VH-001',
+        title: localReminder.title,
+        service_type: localReminder.serviceType,
+        due_date: localReminder.dueDate || null,
+        due_date_end: localReminder.dueDateEnd || null,
+        due_odometer_km: localReminder.dueOdometerKm,
+        due_odometer_max_km: localReminder.dueOdometerMaxKm,
+        status: 'Pending',
+        notes: localReminder.notes,
+      })
+      .select('*')
+      .single()
+
+    if (error) {
+      console.warn('Failed to insert service reminder to Supabase:', error.message)
+      return { reminder: localReminder, savedToSupabase: false }
+    }
+
+    return {
+      reminder: mapServiceReminderRow(data),
+      savedToSupabase: true,
+    }
+  } catch (err) {
+    console.error('Error in createServiceReminderRecord:', err)
+    return { reminder: localReminder, savedToSupabase: false }
+  }
+}
+
+export async function completeServiceReminderRecord(
+  primaryVehicle,
+  reminderId,
+  completionInput,
+) {
+  const completedDate =
+    completionInput.completedDate || new Date().toISOString().split('T')[0]
+  const completedOdometerKm = completionInput.completedOdometerKm
+    ? Number(completionInput.completedOdometerKm)
+    : null
+  const amountPaid = Math.max(0, Number(completionInput.amountPaid) || 0)
+  const serviceCenter = (completionInput.serviceCenter || '').trim()
+  const invoiceNo = (completionInput.invoiceNo || '').trim()
+  const notes = (completionInput.notes || '').trim()
+
+  const localUpdated = {
+    status: 'Completed',
+    completedDate,
+    completedOdometerKm,
+    amountPaid,
+    serviceCenter,
+    invoiceNo,
+    notes,
+  }
+
+  if (
+    !isSupabaseConfigured ||
+    !supabase ||
+    String(reminderId).startsWith('REM-')
+  ) {
+    return { updates: localUpdated, savedToSupabase: false }
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('service_reminders')
+      .update({
+        status: 'Completed',
+        completed_date: completedDate,
+        completed_odometer_km: completedOdometerKm,
+        amount_paid: amountPaid,
+        service_center: serviceCenter,
+        invoice_no: invoiceNo,
+        notes,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', reminderId)
+      .select('*')
+      .single()
+
+    if (error) {
+      console.warn('Failed to complete service reminder in Supabase:', error.message)
+      return { updates: localUpdated, savedToSupabase: false }
+    }
+
+    return {
+      reminder: mapServiceReminderRow(data),
+      savedToSupabase: true,
+    }
+  } catch (err) {
+    console.error('Error in completeServiceReminderRecord:', err)
+    return { updates: localUpdated, savedToSupabase: false }
+  }
+}
+
+export async function deleteServiceReminderRecord(primaryVehicle, reminderId) {
+  if (
+    !isSupabaseConfigured ||
+    !supabase ||
+    String(reminderId).startsWith('REM-')
+  ) {
+    return { success: true }
+  }
+
+  try {
+    await supabase.from('service_reminders').delete().eq('id', reminderId)
+    return { success: true }
+  } catch (err) {
+    console.error('Error in deleteServiceReminderRecord:', err)
+    return { success: false }
+  }
 }

@@ -3,11 +3,10 @@ import { useEffect, useRef, useState } from 'react'
 /**
  * High-performance 60/120fps animated number counter hook.
  * Uses native requestAnimationFrame with ease-out cubic interpolation.
+ * Always counts up smoothly from initialValue (default 0) to targetValue.
  */
-export function useAnimatedNumber(targetValue, duration = 650, initialValue) {
-  const [displayValue, setDisplayValue] = useState(() =>
-    initialValue !== undefined ? Number(initialValue) : Number(targetValue) || 0,
-  )
+export function useAnimatedNumber(targetValue, duration = 850, initialValue = 0) {
+  const [displayValue, setDisplayValue] = useState(() => Number(initialValue) || 0)
   const displayRef = useRef(displayValue)
 
   useEffect(() => {

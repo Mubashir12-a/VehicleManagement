@@ -17,6 +17,7 @@ export default function DashboardPage() {
     summary,
     latestRefill,
     maintenanceItems,
+    componentServiceLogs = [],
     monthlyFuelSummary,
     loading,
     source,
@@ -91,6 +92,8 @@ export default function DashboardPage() {
       <VehicleHeroCard
         vehicle={primaryVehicle}
         summary={summary}
+        maintenanceItems={maintenanceItems}
+        serviceLogs={componentServiceLogs}
         onSave={updatePrimaryVehicle}
       />
 

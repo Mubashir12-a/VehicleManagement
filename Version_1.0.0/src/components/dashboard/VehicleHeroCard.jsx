@@ -4,7 +4,6 @@ import {
   Fuel,
   Gauge,
   Heart,
-  Lock,
   Pencil,
   Wrench,
   X,
@@ -18,14 +17,19 @@ import {
 } from '../../utils/vehicleIllustration'
 import VehicleCrayonIllustration from '../illustrations/VehicleCrayonIllustration'
 
-const STATUS_OPTIONS = ['Active', 'Maintenance', 'Idle', 'Out of Service']
-
-export default function VehicleHeroCard({ vehicle, summary, onSave }) {
+export default function VehicleHeroCard({
+  vehicle,
+  summary,
+  maintenanceItems = [],
+  serviceLogs = [],
+  onSave,
+}) {
   const [isEditing, setIsEditing] = useState(false)
   const [formData, setFormData] = useState(() => ({
     ...vehicle,
-    topSpeed: vehicle.topSpeed ?? vehicle.speed ?? 150,
-    speed: vehicle.topSpeed ?? vehicle.speed ?? 150,
+    fuelType: vehicle.fuelType || 'Petrol (E10)',
+    topSpeed: vehicle.topSpeed ?? vehicle.speed ?? 0,
+    speed: vehicle.topSpeed ?? vehicle.speed ?? 0,
   }))
   const [saving, setSaving] = useState(false)
   const [feedback, setFeedback] = useState('')
@@ -38,11 +42,32 @@ export default function VehicleHeroCard({ vehicle, summary, onSave }) {
     model: activeData.model,
   })
 
+  // Dynamic component health calculation (e.g. 18/18, 17/18 if 1 is due)
+  const currentOdo = Number(vehicle?.mileage) || 0
+  const items = maintenanceItems.length > 0 ? maintenanceItems : []
+  const totalItems = items.length || 18
+
+  let dueCount = 0
+  items.forEach((item) => {
+    const odoNum = currentOdo
+    const itemLastOdo = Number(item.lastServiceOdo) || 0
+    const effectiveLastOdo = itemLastOdo > odoNum ? 0 : itemLastOdo
+    const rawPassedKm = Math.max(0, odoNum - effectiveLastOdo)
+    const interval = Math.max(1, Number(item.intervalKm) || 1000)
+    const remainingKm = interval - rawPassedKm
+    if (remainingKm <= 0) {
+      dueCount += 1
+    }
+  })
+
+  const healthyCount = Math.max(0, totalItems - dueCount)
+
   const startEditing = () => {
     setFormData({
       ...vehicle,
-      topSpeed: vehicle.topSpeed ?? vehicle.speed ?? 150,
-      speed: vehicle.topSpeed ?? vehicle.speed ?? 150,
+      fuelType: vehicle.fuelType || 'Petrol (E10)',
+      topSpeed: vehicle.topSpeed ?? vehicle.speed ?? 0,
+      speed: vehicle.topSpeed ?? vehicle.speed ?? 0,
     })
     setFeedback('')
     setIsEditing(true)
@@ -84,8 +109,10 @@ export default function VehicleHeroCard({ vehicle, summary, onSave }) {
   }
 
   const totalSpend = Number(summary?.totalSpendTillNow || 0)
-  const animatedMileage = useAnimatedNumber(vehicle.mileage, 750)
-  const animatedSpend = useAnimatedNumber(totalSpend, 850)
+  const animatedMileage = useAnimatedNumber(vehicle.mileage, 850, 0)
+  const animatedSpend = useAnimatedNumber(totalSpend, 850, 0)
+  const targetSpeed = Number(vehicle?.topSpeed ?? vehicle?.speed ?? 0)
+  const animatedSpeed = useAnimatedNumber(targetSpeed, 850, 0)
 
   return (
     <section className="relative overflow-hidden rounded-3xl border border-white/10 bg-[#0c0f12] shadow-[0_24px_60px_rgba(0,0,0,0.65)]">
@@ -156,16 +183,8 @@ export default function VehicleHeroCard({ vehicle, summary, onSave }) {
                 {/* Status Pill (matches reference pill aesthetic) */}
                 <div className="mt-5 flex flex-wrap items-center gap-2.5">
                   <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wider text-zinc-300">
-                    <span
-                      className={`h-2 w-2 rounded-full ${
-                        vehicle.status === 'Active'
-                          ? 'bg-lime-400 shadow-[0_0_8px_#a3e635]'
-                          : vehicle.status === 'Maintenance'
-                            ? 'bg-amber-400'
-                            : 'bg-zinc-400'
-                      }`}
-                    />
-                    {vehicle.status} · {Number(vehicle.engineCc).toLocaleString()} CC
+                    <span className="h-2 w-2 rounded-full bg-lime-400 shadow-[0_0_8px_#a3e635]" />
+                    {vehicle.fuelType || 'Petrol (E10)'} · {Number(vehicle.engineCc).toLocaleString()} CC
                   </span>
 
                   <span className="rounded-full border border-lime-400/20 bg-lime-400/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-lime-300">
@@ -176,7 +195,7 @@ export default function VehicleHeroCard({ vehicle, summary, onSave }) {
                   </span>
 
                   <span className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-300">
-                    {vehicle.topSpeed ?? vehicle.speed ?? 150} KM/H
+                    {animatedSpeed} KM/H
                   </span>
                 </div>
               </div>
@@ -206,36 +225,50 @@ export default function VehicleHeroCard({ vehicle, summary, onSave }) {
                   </p>
                 </div>
 
-                {/* Health (Reserved for later) */}
+                {/* Health Option (reflects healthy / total, e.g. 18/18, 17/18) */}
                 <div>
-                  <Heart className="h-5 w-5 text-lime-400" />
-                  <p className="mt-2.5 text-2xl font-extrabold tracking-tight text-zinc-300">
-                    —
+                  <Heart
+                    className={`h-5 w-5 ${
+                      dueCount > 0 ? 'text-amber-400' : 'text-lime-400'
+                    }`}
+                  />
+                  <p className="mt-2.5 text-2xl font-extrabold tracking-tight text-white tabular-nums">
+                    <span
+                      className={
+                        dueCount > 0 ? 'text-amber-300' : 'text-lime-400'
+                      }
+                    >
+                      {healthyCount}
+                    </span>
+                    <span className="font-mono text-base font-normal text-zinc-500">
+                      /{totalItems}
+                    </span>
                   </p>
                   <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
-                    Health · Later
+                    Health · {dueCount > 0 ? `${dueCount} Due` : 'All Good'}
                   </p>
                 </div>
 
-                {/* Services Done (Reserved for later) */}
+                {/* Services Done */}
                 <div>
                   <Wrench className="h-5 w-5 text-lime-400" />
-                  <p className="mt-2.5 text-2xl font-extrabold tracking-tight text-zinc-300">
-                    —
+                  <p className="mt-2.5 text-2xl font-extrabold tracking-tight text-white tabular-nums">
+                    {(serviceLogs || []).length}{' '}
+                    <span className="text-base font-medium text-zinc-400">logs</span>
                   </p>
                   <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
-                    Services · Later
+                    Services Done
                   </p>
                 </div>
 
-                {/* Mileage (Reserved for later) */}
+                {/* Fuel Level */}
                 <div>
                   <Fuel className="h-5 w-5 text-lime-400" />
-                  <p className="mt-2.5 text-2xl font-extrabold tracking-tight text-zinc-300">
-                    —
+                  <p className="mt-2.5 text-2xl font-extrabold tracking-tight text-white tabular-nums">
+                    {Number(vehicle.fuelLevel || 0)}%
                   </p>
                   <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
-                    Mileage · Later
+                    Fuel Level
                   </p>
                 </div>
 
@@ -381,17 +414,23 @@ export default function VehicleHeroCard({ vehicle, summary, onSave }) {
                   </label>
                   <input
                     type="number"
-                    min={50}
+                    min={0}
                     max={8000}
-                    required
-                    value={formData.engineCc}
-                    onChange={(e) =>
+                    value={
+                      formData.engineCc === 0 || !formData.engineCc
+                        ? ''
+                        : formData.engineCc
+                    }
+                    onChange={(e) => {
+                      const val =
+                        e.target.value === '' ? '' : Number(e.target.value)
                       setFormData({
                         ...formData,
-                        engineCc: Number(e.target.value) || 0,
+                        engineCc: val,
                       })
-                    }
-                    className="mt-1 w-full rounded-lg border border-white/10 bg-[#151a20] px-3 py-2 text-sm text-white focus:border-lime-400 focus:outline-none"
+                    }}
+                    placeholder="0"
+                    className="mt-1 w-full rounded-lg border border-white/10 bg-[#151a20] px-3 py-2 text-sm text-white placeholder-zinc-500 focus:border-lime-400 focus:outline-none"
                   />
                 </div>
 
@@ -403,17 +442,22 @@ export default function VehicleHeroCard({ vehicle, summary, onSave }) {
                     type="number"
                     min={0}
                     max={500}
-                    required
-                    value={formData.topSpeed ?? formData.speed ?? 150}
-                    onChange={(e) =>
+                    value={
+                      formData.topSpeed === 0 || !formData.topSpeed
+                        ? ''
+                        : formData.topSpeed
+                    }
+                    onChange={(e) => {
+                      const val =
+                        e.target.value === '' ? '' : Number(e.target.value)
                       setFormData({
                         ...formData,
-                        topSpeed: Number(e.target.value) || 0,
-                        speed: Number(e.target.value) || 0,
+                        topSpeed: val,
+                        speed: val,
                       })
-                    }
-                    placeholder="150"
-                    className="mt-1 w-full rounded-lg border border-lime-400/30 bg-[#151a20] px-3 py-2 text-sm font-bold text-lime-300 focus:border-lime-400 focus:outline-none"
+                    }}
+                    placeholder="0"
+                    className="mt-1 w-full rounded-lg border border-lime-400/30 bg-[#151a20] px-3 py-2 text-sm font-bold text-lime-300 placeholder-zinc-500 focus:border-lime-400 focus:outline-none"
                   />
                 </div>
               </div>
@@ -434,39 +478,60 @@ export default function VehicleHeroCard({ vehicle, summary, onSave }) {
 
                 <div>
                   <label className="block text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
-                    Status
+                    Fuel Type *
                   </label>
                   <select
-                    value={formData.status}
+                    value={formData.fuelType || 'Petrol (E10)'}
                     onChange={(e) =>
-                      setFormData({ ...formData, status: e.target.value })
+                      setFormData({ ...formData, fuelType: e.target.value })
                     }
                     className="mt-1 w-full rounded-lg border border-white/10 bg-[#151a20] px-3 py-2 text-sm text-white focus:border-lime-400 focus:outline-none"
                   >
-                    {STATUS_OPTIONS.map((status) => (
-                      <option key={status} value={status}>
-                        {status}
-                      </option>
-                    ))}
+                    <optgroup label="Petrol / Gasoline">
+                      <option value="Petrol (E0)">Petrol (E0 - Pure Petrol)</option>
+                      <option value="Petrol (E10)">Petrol (E10)</option>
+                      <option value="Petrol (E20)">Petrol (E20)</option>
+                      <option value="Petrol (E30)">Petrol (E30)</option>
+                      <option value="Petrol (E85)">Petrol (E85 - Flex Fuel)</option>
+                      <option value="Petrol (90 Octane)">Petrol (90 Octane)</option>
+                      <option value="Petrol (95 Octane)">Petrol (95 Octane Premium)</option>
+                      <option value="Petrol (100 Octane)">Petrol (100 Octane Race)</option>
+                    </optgroup>
+                    <optgroup label="Diesel">
+                      <option value="Diesel (Standard)">Diesel (Standard)</option>
+                      <option value="Diesel (B7)">Diesel (B7)</option>
+                      <option value="Diesel (B10)">Diesel (B10)</option>
+                      <option value="Diesel (B20)">Diesel (B20)</option>
+                      <option value="Diesel (Premium)">Diesel (Premium / High Cetane)</option>
+                    </optgroup>
+                    <optgroup label="Electric / Battery">
+                      <option value="Electricity">Electricity</option>
+                    </optgroup>
                   </select>
                 </div>
 
                 <div>
-                  <div className="flex items-center justify-between">
-                    <label className="block text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
-                      Odometer
-                    </label>
-                    <span className="flex items-center gap-1 text-[10px] font-bold text-lime-400">
-                      <Lock className="h-2.5 w-2.5" />
-                      Auto
-                    </span>
-                  </div>
-                  <div className="mt-1 flex items-center justify-between rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm font-mono font-bold text-zinc-200">
-                    <span>{Number(vehicle.mileage || 0).toLocaleString('en-IN')}</span>
-                    <span className="text-[10px] text-zinc-500 font-sans">KM</span>
-                  </div>
+                  <label className="block text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+                    Odometer (km)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={
+                      formData.mileage === 0 || !formData.mileage
+                        ? ''
+                        : formData.mileage
+                    }
+                    onChange={(e) => {
+                      const val =
+                        e.target.value === '' ? '' : Number(e.target.value)
+                      setFormData({ ...formData, mileage: val })
+                    }}
+                    placeholder="0"
+                    className="mt-1 w-full rounded-lg border border-white/10 bg-[#151a20] px-3 py-2 text-sm font-mono text-white placeholder-zinc-500 focus:border-lime-400 focus:outline-none"
+                  />
                   <p className="mt-0.5 text-[9px] text-zinc-500">
-                    Auto-synced with fuel refills
+                    Auto-syncs with fuel refills
                   </p>
                 </div>
 
@@ -478,11 +543,18 @@ export default function VehicleHeroCard({ vehicle, summary, onSave }) {
                     type="number"
                     min={0}
                     max={100}
-                    value={formData.fuelLevel}
-                    onChange={(e) =>
-                      setFormData({ ...formData, fuelLevel: e.target.value })
+                    value={
+                      formData.fuelLevel === 0 || !formData.fuelLevel
+                        ? ''
+                        : formData.fuelLevel
                     }
-                    className="mt-1 w-full rounded-lg border border-white/10 bg-[#151a20] px-3 py-2 text-sm text-white focus:border-lime-400 focus:outline-none"
+                    onChange={(e) => {
+                      const val =
+                        e.target.value === '' ? '' : Number(e.target.value)
+                      setFormData({ ...formData, fuelLevel: val })
+                    }}
+                    placeholder="0"
+                    className="mt-1 w-full rounded-lg border border-white/10 bg-[#151a20] px-3 py-2 text-sm text-white placeholder-zinc-500 focus:border-lime-400 focus:outline-none"
                   />
                 </div>
               </div>

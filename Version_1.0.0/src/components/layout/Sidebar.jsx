@@ -1,6 +1,6 @@
 import {
   BarChart3,
-  Car,
+  CalendarClock,
   Database,
   Fuel,
   LayoutDashboard,
@@ -15,9 +15,9 @@ import { supabaseConfigStatus } from '../../lib/supabase'
 
 const navItems = [
   { label: 'Dashboard', to: '/', icon: LayoutDashboard, end: true },
-  { label: 'My Vehicle', to: '/vehicles', icon: Car },
   { label: 'Fuel History', to: '/fuel-history', icon: Fuel },
   { label: 'Maintenance', to: '/maintenance', icon: Wrench },
+  { label: 'Important Dates', to: '/important-dates', icon: CalendarClock },
   { label: 'Analytics', to: '/analytics', icon: BarChart3 },
   { label: 'Settings', to: '/settings', icon: Settings },
 ]
@@ -37,7 +37,7 @@ export default function Sidebar({ isOpen, onClose }) {
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-white/8 bg-[#0c0f12] text-zinc-100 transition-transform duration-200 ease-in-out lg:static lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col justify-between overflow-y-auto border-r border-white/8 bg-[#0c0f12] text-zinc-100 transition-transform duration-200 ease-in-out lg:translate-x-0 ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >

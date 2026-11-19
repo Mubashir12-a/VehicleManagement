@@ -36,7 +36,7 @@ function getInitialState(vehicle, editingRefill) {
   const defaultAmount = (Number(defaultLiters) * Number(defaultPrice)).toFixed(2)
 
   return {
-    odometerKm: vehicle?.mileage || 0,
+    odometerKm: vehicle?.mileage || '',
     liters: defaultLiters,
     pricePerLiter: defaultPrice,
     amountSpent: defaultAmount,
@@ -256,11 +256,12 @@ function FuelEntrySidebarForm({
                 required
                 min="0"
                 step="1"
-                value={formData.odometerKm}
+                value={formData.odometerKm === 0 || !formData.odometerKm ? '' : formData.odometerKm}
+                placeholder="0"
                 onChange={(e) =>
                   setFormData({ ...formData, odometerKm: e.target.value })
                 }
-                className="w-full rounded-xl border border-white/10 bg-[#12161c] px-3 py-2 font-mono text-xs text-white focus:border-lime-400 focus:outline-none"
+                className="w-full rounded-xl border border-white/10 bg-[#12161c] px-3 py-2 font-mono text-xs text-white placeholder-zinc-500 focus:border-lime-400 focus:outline-none"
               />
               <span className="pointer-events-none absolute right-2.5 top-2 font-mono text-[10px] font-bold text-zinc-500">
                 KM

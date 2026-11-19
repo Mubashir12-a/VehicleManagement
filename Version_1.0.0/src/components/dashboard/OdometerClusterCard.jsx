@@ -106,44 +106,44 @@ export default function OdometerClusterCard({
   onLogFuelRefill,
   onOpenFuelModal,
 }) {
+  const isCar = vehicle?.category === 'Four Wheeler'
   const [isHovered, setIsHovered] = useState(false)
   const [showRefillForm, setShowRefillForm] = useState(false)
   const [saving, setSaving] = useState(false)
   const [feedback, setFeedback] = useState('')
 
   const [formData, setFormData] = useState(() => ({
-    odometerKm: vehicle.mileage + 120,
-    liters: 4,
-    amountSpent: 420,
+    odometerKm: vehicle?.mileage || '',
+    liters: isCar ? 25 : 4,
+    amountSpent: isCar ? 2500 : 420,
     fuelLevelAfter: 100,
     refillDate: '',
     notes: '',
   }))
 
-  const digits = formatOdometerDigits(vehicle.mileage)
-  const fuelLevel = Math.min(100, Math.max(0, Number(vehicle.fuelLevel) || 78))
-  const isCar = vehicle.category === 'Four Wheeler'
+  const [initialIgnition, setInitialIgnition] = useState(true)
 
-  // User-configured static speed from vehicle profile (defaults to 150 km/h)
+  // Initial ignition test sweep on page load: revs up and then settles to idle, ready for hover
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setInitialIgnition(false)
+    }, 2400)
+    return () => clearTimeout(t)
+  }, [])
+
+  // Animate odometer from 0 up to actual database mileage
+  const animatedOdometer = useAnimatedNumber(vehicle?.mileage || 0, 1200)
+  const digits = formatOdometerDigits(animatedOdometer)
+
+  // Animate fuel level from 0 up to database fuel level
+  const targetFuel = Math.min(100, Math.max(0, Number(vehicle?.fuelLevel) || 0))
+  const animatedFuel = useAnimatedNumber(targetFuel, 1000)
+
+  // User-configured static speed from vehicle profile (e.g. 170 km/h)
   const configuredSpeed = Math.max(
     0,
     Math.round(Number(vehicle?.topSpeed ?? vehicle?.speed ?? 150)),
   )
-
-  const [sweepKey, setSweepKey] = useState(0)
-  const [speedTarget, setSpeedTarget] = useState(0)
-
-  // Start increasing speed animation on mount or when speed is updated in profile card
-  useEffect(() => {
-    let active = true
-    const t = setTimeout(() => {
-      if (active) setSpeedTarget(configuredSpeed)
-    }, 60)
-    return () => {
-      active = false
-      clearTimeout(t)
-    }
-  }, [configuredSpeed, sweepKey])
 
   const maxRpm = isCar ? 8000 : 12000
   const cruisingRpm =
@@ -154,26 +154,21 @@ export default function OdometerClusterCard({
         )
       : 1400
 
-  // Tachometer revs up dynamically with increasing speed animation on hover
-  const targetRpm = isHovered
-    ? Math.min(maxRpm, cruisingRpm + 3200)
-    : speedTarget > 0
-      ? cruisingRpm
-      : 1400
-  const animatedRpm = useAnimatedNumber(targetRpm, 900, 1400)
+  // Tachometer revs up dynamically with increasing speed animation on hover or initial sweep
+  const isAccelerating = isHovered || initialIgnition
+  const targetRpm = isAccelerating ? Math.min(maxRpm, cruisingRpm + 3200) : 1400
+  const animatedRpm = useAnimatedNumber(targetRpm, 750)
   const rpmPercent = Math.min(100, Math.max(0, (animatedRpm / maxRpm) * 100))
 
-  // Increasing speed animation towards configured speed (0 -> configuredSpeed) and stays static
-  const activeSpeedTarget = isHovered
-    ? Math.max(configuredSpeed, isCar ? 180 : 160)
-    : speedTarget
-  const animatedSpeed = useAnimatedNumber(activeSpeedTarget, 1100, 0)
+  // Increasing speed animation towards configured speed (0 -> configuredSpeed) and shifts gears
+  const targetSpeed = isAccelerating ? configuredSpeed : 0
+  const animatedSpeed = useAnimatedNumber(targetSpeed, 750)
   const speedColor = getSpeedColor(animatedSpeed)
   const currentGear = getGearForSpeed(animatedSpeed, isCar)
 
   const openForm = () => {
     setFormData({
-      odometerKm: Number(vehicle.mileage) + 100,
+      odometerKm: vehicle.mileage || '',
       liters: isCar ? 25 : 4,
       amountSpent: isCar ? 2500 : 420,
       fuelLevelAfter: 100,
@@ -218,11 +213,7 @@ export default function OdometerClusterCard({
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => {
-              setSpeedTarget(0)
-              setIsHovered((prev) => !prev)
-              setSweepKey((k) => k + 1)
-            }}
+            onClick={() => setIsHovered((prev) => !prev)}
             className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-zinc-300 transition-colors hover:border-lime-400/40 hover:bg-lime-400/10 hover:text-lime-300"
           >
             <RotateCw className={`h-3.5 w-3.5 ${isHovered ? 'text-lime-400 animate-spin' : ''}`} />
@@ -471,11 +462,11 @@ export default function OdometerClusterCard({
           <div>
             <div className="flex items-center justify-between text-[11px]">
               <span className="font-semibold text-zinc-400">Fuel Level</span>
-              <span className="font-mono font-bold text-lime-300">{fuelLevel}%</span>
+              <span className="font-mono font-bold text-lime-300">{animatedFuel}%</span>
             </div>
             <div className="mt-1.5 flex h-2 w-full gap-1 overflow-hidden rounded-full bg-black/50 p-0.5 ring-1 ring-white/10">
               {Array.from({ length: 10 }).map((_, idx) => {
-                const isFilled = (idx + 1) * 10 <= fuelLevel
+                const isFilled = (idx + 1) * 10 <= animatedFuel
                 const isLow = idx < 2
                 return (
                   <div
@@ -580,12 +571,13 @@ export default function OdometerClusterCard({
               <input
                 type="number"
                 required
-                min={vehicle.mileage}
-                value={formData.odometerKm}
+                min={vehicle.mileage || 0}
+                value={formData.odometerKm === 0 || !formData.odometerKm ? '' : formData.odometerKm}
+                placeholder="0"
                 onChange={(e) =>
                   setFormData({ ...formData, odometerKm: e.target.value })
                 }
-                className="mt-1 w-full rounded-xl border border-white/10 bg-[#0b0e11] px-2.5 py-1.5 text-sm text-white focus:border-lime-400 focus:outline-none"
+                className="mt-1 w-full rounded-xl border border-white/10 bg-[#0b0e11] px-2.5 py-1.5 text-sm text-white placeholder-zinc-500 focus:border-lime-400 focus:outline-none"
               />
             </div>
 

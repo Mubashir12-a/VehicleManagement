@@ -1,120 +1,211 @@
-import { CalendarClock, IndianRupee, Wrench } from 'lucide-react'
+import {
+  Database,
+  History,
+  Plus,
+  RefreshCw,
+  ShieldAlert,
+  Wrench,
+} from 'lucide-react'
+import { useState } from 'react'
 import PageHeader from '../components/common/PageHeader'
-import StatCard from '../components/common/StatCard'
-import StatusBadge from '../components/common/StatusBadge'
-import MaintenanceHealthCard from '../components/dashboard/MaintenanceHealthCard'
+import AddRepairModal from '../components/maintenance/AddRepairModal'
+import ComponentHealthGrid from '../components/maintenance/ComponentHealthGrid'
+import ItemServiceHistoryModal from '../components/maintenance/ItemServiceHistoryModal'
+import LogServiceModal from '../components/maintenance/LogServiceModal'
+import MaintenanceHeaderStats from '../components/maintenance/MaintenanceHeaderStats'
+import OtherRepairsSection from '../components/maintenance/OtherRepairsSection'
+import UnifiedServiceTimeline from '../components/maintenance/UnifiedServiceTimeline'
 import { useFleetData } from '../hooks/useFleetData'
 
 export default function MaintenancePage() {
   const {
     primaryVehicle,
-    maintenance,
-    maintenanceItems,
+    maintenanceItems = [],
+    componentServiceLogs = [],
+    vehicleRepairs = [],
     source,
-    updateMaintenanceItem,
+    loading,
+    refresh,
+    addComponentServiceLog,
+    deleteComponentServiceLog,
+    addVehicleRepair,
+    deleteVehicleRepair,
   } = useFleetData()
 
-  const totalEstimatedCost = (maintenance || []).reduce(
-    (sum, item) => sum + (Number(item?.estimatedCost) || 0),
-    0,
-  )
-  const highPriorityCount = (maintenance || []).filter(
-    (item) => item?.priority === 'High',
-  ).length
+  // Tab State: 'components' | 'repairs' | 'timeline'
+  const [activeTab, setActiveTab] = useState('components')
+
+  // Modals state
+  const [logModalItem, setLogModalItem] = useState(null)
+  const [historyModalItem, setHistoryModalItem] = useState(null)
+  const [isAddRepairOpen, setIsAddRepairOpen] = useState(false)
+
+  const handleOpenLogModal = (item) => {
+    setLogModalItem(item)
+  }
+
+  const handleOpenHistoryModal = (item) => {
+    setHistoryModalItem(item)
+  }
+
+  const handleSaveServiceLog = async (item, logInput) => {
+    await addComponentServiceLog(item, logInput)
+  }
+
+  const handleDeleteServiceLog = async (logId, itemKey) => {
+    await deleteComponentServiceLog(logId, itemKey)
+  }
+
+  const handleSaveRepair = async (repairInput) => {
+    await addVehicleRepair(repairInput)
+  }
+
+  const handleDeleteRepair = async (repairId) => {
+    await deleteVehicleRepair(repairId)
+  }
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Maintenance"
-        description="Track wear component limits, preventive servicing, and upcoming inspections."
+        title="Maintenance & Component Health"
+        description="Single-vehicle tracking: 18 wear components, periodic intervals, service logs, and custom repairs."
+        actions={
+          <div className="flex items-center gap-2.5">
+            <span
+              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
+                source === 'supabase'
+                  ? 'border border-lime-400/30 bg-lime-400/10 text-lime-300 shadow-[0_0_12px_rgba(163,230,53,0.18)]'
+                  : 'border border-amber-400/30 bg-amber-400/10 text-amber-300'
+              }`}
+            >
+              <Database className="h-3.5 w-3.5 text-lime-400" />
+              {source === 'supabase' ? 'Live Supabase' : 'Local Fallback'}
+            </span>
+
+            <button
+              type="button"
+              onClick={refresh}
+              disabled={loading}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-zinc-200 transition-colors hover:bg-white/10 disabled:opacity-50"
+            >
+              <RefreshCw
+                className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`}
+              />
+              Refresh
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsAddRepairOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-amber-400 px-3.5 py-2 text-xs font-bold text-zinc-950 transition-colors hover:bg-amber-300"
+            >
+              <Plus className="h-3.5 w-3.5" /> Log Repair
+            </button>
+          </div>
+        }
       />
 
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard
-          title="Open Work Orders"
-          value={maintenance.length}
-          subtitle="Active & upcoming jobs"
-          icon={Wrench}
-          accent="indigo"
-        />
-        <StatCard
-          title="High Priority Alerts"
-          value={highPriorityCount}
-          subtitle="Require immediate attention"
-          icon={CalendarClock}
-          accent="rose"
-        />
-        <StatCard
-          title="Estimated Cost"
-          value={`₹${totalEstimatedCost.toLocaleString('en-IN')}`}
-          subtitle="Projected service spend"
-          icon={IndianRupee}
-          accent="amber"
-        />
-      </section>
-
-      <MaintenanceHealthCard
+      {/* 1. Header Hero & 4 Core Stat Cards focused on single vehicle */}
+      <MaintenanceHeaderStats
+        vehicle={primaryVehicle}
         items={maintenanceItems}
-        currentOdo={primaryVehicle.mileage}
-        onUpdateItem={updateMaintenanceItem}
+        serviceLogs={componentServiceLogs}
+        repairs={vehicleRepairs}
       />
 
-      <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0d1014]">
-        <div className="border-b border-white/8 px-5 py-4">
-          <h3 className="text-base font-bold text-white">Service Schedule</h3>
-          <p className="mt-0.5 text-xs text-zinc-400">
-            {source === 'supabase'
-              ? 'Live maintenance queue loaded from Supabase'
-              : 'Sample maintenance queue'}
-          </p>
-        </div>
+      {/* 2. Navigation Tabs */}
+      <div className="flex flex-wrap items-center gap-2 border-b border-white/8 pb-2">
+        <button
+          type="button"
+          onClick={() => setActiveTab('components')}
+          className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-xs font-black transition-all ${
+            activeTab === 'components'
+              ? 'bg-lime-400 text-zinc-950 shadow-[0_0_16px_rgba(163,230,53,0.25)]'
+              : 'border border-white/8 bg-[#0d1014] text-zinc-400 hover:border-white/15 hover:text-white'
+          }`}
+        >
+          <Wrench className="h-3.5 w-3.5" />
+          Component Health ({maintenanceItems.length})
+        </button>
 
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-white/8 text-left text-sm">
-            <thead className="bg-white/3 text-xs font-semibold uppercase tracking-wider text-zinc-400">
-              <tr>
-                <th className="px-5 py-3">Work Order</th>
-                <th className="px-5 py-3">Vehicle</th>
-                <th className="px-5 py-3">Service Type</th>
-                <th className="px-5 py-3">Priority</th>
-                <th className="px-5 py-3">Status</th>
-                <th className="px-5 py-3">Due Date</th>
-                <th className="px-5 py-3 text-right">Est. Cost</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/6 text-zinc-300">
-              {maintenance.map((item) => (
-                <tr key={item.id} className="hover:bg-white/3">
-                  <td className="whitespace-nowrap px-5 py-3.5 font-mono text-xs font-bold text-lime-300">
-                    {item.id}
-                  </td>
-                  <td className="whitespace-nowrap px-5 py-3.5">
-                    <div className="font-semibold text-white">
-                      {item.vehicleName}
-                    </div>
-                    <div className="text-xs text-zinc-500">{item.vehicleId}</div>
-                  </td>
-                  <td className="whitespace-nowrap px-5 py-3.5">
-                    {item.serviceType}
-                  </td>
-                  <td className="whitespace-nowrap px-5 py-3.5">
-                    <StatusBadge status={item.priority} />
-                  </td>
-                  <td className="whitespace-nowrap px-5 py-3.5">
-                    <StatusBadge status={item.status} />
-                  </td>
-                  <td className="whitespace-nowrap px-5 py-3.5 text-zinc-400">
-                    {item.dueDate}
-                  </td>
-                  <td className="whitespace-nowrap px-5 py-3.5 text-right font-bold text-white">
-                    ₹{item.estimatedCost.toLocaleString('en-IN')}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <button
+          type="button"
+          onClick={() => setActiveTab('repairs')}
+          className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-xs font-black transition-all ${
+            activeTab === 'repairs'
+              ? 'bg-amber-400 text-zinc-950 shadow-[0_0_16px_rgba(251,191,36,0.25)]'
+              : 'border border-white/8 bg-[#0d1014] text-zinc-400 hover:border-white/15 hover:text-white'
+          }`}
+        >
+          <ShieldAlert className="h-3.5 w-3.5" />
+          Other Repairs & Replacements ({vehicleRepairs.length})
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('timeline')}
+          className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-xs font-black transition-all ${
+            activeTab === 'timeline'
+              ? 'bg-indigo-400 text-zinc-950 shadow-[0_0_16px_rgba(129,140,248,0.25)]'
+              : 'border border-white/8 bg-[#0d1014] text-zinc-400 hover:border-white/15 hover:text-white'
+          }`}
+        >
+          <History className="h-3.5 w-3.5" />
+          Complete Service Logbook ({componentServiceLogs.length + vehicleRepairs.length})
+        </button>
       </div>
+
+      {/* 3. Tab Contents */}
+      {activeTab === 'components' && (
+        <ComponentHealthGrid
+          items={maintenanceItems}
+          currentOdo={primaryVehicle?.mileage || 0}
+          serviceLogs={componentServiceLogs}
+          onOpenLogModal={handleOpenLogModal}
+          onOpenHistoryModal={handleOpenHistoryModal}
+        />
+      )}
+
+      {activeTab === 'repairs' && (
+        <OtherRepairsSection
+          repairs={vehicleRepairs}
+          onOpenAddModal={() => setIsAddRepairOpen(true)}
+          onDeleteRepair={handleDeleteRepair}
+        />
+      )}
+
+      {activeTab === 'timeline' && (
+        <UnifiedServiceTimeline
+          items={maintenanceItems}
+          serviceLogs={componentServiceLogs}
+          repairs={vehicleRepairs}
+        />
+      )}
+
+      {/* 4. Modals */}
+      <LogServiceModal
+        isOpen={Boolean(logModalItem)}
+        onClose={() => setLogModalItem(null)}
+        item={logModalItem}
+        vehicle={primaryVehicle}
+        onSubmit={handleSaveServiceLog}
+      />
+
+      <ItemServiceHistoryModal
+        isOpen={Boolean(historyModalItem)}
+        onClose={() => setHistoryModalItem(null)}
+        item={historyModalItem}
+        logs={componentServiceLogs}
+        onDeleteLog={handleDeleteServiceLog}
+        onOpenLogModal={handleOpenLogModal}
+      />
+
+      <AddRepairModal
+        isOpen={isAddRepairOpen}
+        onClose={() => setIsAddRepairOpen(false)}
+        vehicle={primaryVehicle}
+        onSubmit={handleSaveRepair}
+      />
     </div>
   )
 }

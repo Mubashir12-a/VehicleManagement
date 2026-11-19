@@ -1,22 +1,24 @@
 import {
+  Activity,
+  ArrowDownUp,
   BatteryCharging,
-  Check,
   CircleDot,
+  Cog,
   Disc,
+  Droplet,
   Droplets,
+  Link,
   Link2,
-  Pencil,
-  RotateCcw,
+  Settings,
+  Sparkles,
   Thermometer,
   Wind,
-  X,
+  Zap,
 } from 'lucide-react'
-import { useState } from 'react'
 import { useAnimatedNumber } from '../../hooks/useAnimatedNumber'
 
 const ITEM_ICONS = {
   engine_oil: Droplets,
-  coolant: Thermometer,
   chain_lube: Link2,
   air_filter: Wind,
   front_tyre: CircleDot,
@@ -24,6 +26,16 @@ const ITEM_ICONS = {
   battery: BatteryCharging,
   brake_front: Disc,
   brake_rear: Disc,
+  clutch_plate: Cog,
+  spark_plug: Zap,
+  coolant: Thermometer,
+  chain_replacement: Link,
+  sprocket_replacement: Settings,
+  brake_fluid_front: Droplet,
+  brake_fluid_rear: Droplet,
+  fork_oil_front: ArrowDownUp,
+  rear_suspension: Activity,
+  washing: Sparkles,
 }
 
 function getHealthMeta(percent, remainingKm) {
@@ -48,24 +60,17 @@ function getHealthMeta(percent, remainingKm) {
   }
 }
 
-function MaintenanceItemCard({
-  item,
-  currentOdo,
-  isEditing,
-  isBusy,
-  editValues,
-  setEditValues,
-  onStartEdit,
-  onCancelEdit,
-  onSaveEdit,
-  onResetAtCurrentOdo,
-}) {
+function MaintenanceItemCard({ item, currentOdo }) {
   const Icon = ITEM_ICONS[item.itemKey] || Droplets
-  const rawPassedKm = Math.max(0, Number(currentOdo) - Number(item.lastServiceOdo))
-  const rawRemainingKm = Number(item.intervalKm) - rawPassedKm
+  const odoNum = Math.max(0, Number(currentOdo) || 0)
+  const itemLastOdo = Number(item.lastServiceOdo) || 0
+  const effectiveLastOdo = itemLastOdo > odoNum ? 0 : itemLastOdo
+  const rawPassedKm = Math.max(0, odoNum - effectiveLastOdo)
+  const interval = Math.max(1, Number(item.intervalKm) || 1000)
+  const rawRemainingKm = interval - rawPassedKm
   const percentPassed = Math.min(
     100,
-    Math.max(0, Math.round((rawPassedKm / Number(item.intervalKm)) * 100)),
+    Math.max(0, Math.round((rawPassedKm / interval) * 100)),
   )
   const meta = getHealthMeta(percentPassed, rawRemainingKm)
 
@@ -86,7 +91,7 @@ function MaintenanceItemCard({
                 {item.label}
               </h4>
               <p className="text-[11px] text-zinc-500">
-                Limit: {Number(item.intervalKm).toLocaleString('en-IN')} km
+                Limit: {interval.toLocaleString('en-IN')} km
               </p>
             </div>
           </div>
@@ -134,135 +139,22 @@ function MaintenanceItemCard({
         </div>
       </div>
 
-      {isEditing ? (
-        <div className="mt-3.5 space-y-2 border-t border-white/8 pt-3">
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="block text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
-                Limit (km)
-              </label>
-              <input
-                type="number"
-                min={100}
-                value={editValues.intervalKm}
-                onChange={(e) =>
-                  setEditValues({
-                    ...editValues,
-                    intervalKm: e.target.value,
-                  })
-                }
-                className="mt-0.5 w-full rounded-lg border border-white/10 bg-[#0b0e11] px-2 py-1 text-xs text-white focus:border-lime-400 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
-                Last Done Odo
-              </label>
-              <input
-                type="number"
-                min={0}
-                value={editValues.lastServiceOdo}
-                onChange={(e) =>
-                  setEditValues({
-                    ...editValues,
-                    lastServiceOdo: e.target.value,
-                  })
-                }
-                className="mt-0.5 w-full rounded-lg border border-white/10 bg-[#0b0e11] px-2 py-1 text-xs text-white focus:border-lime-400 focus:outline-none"
-              />
-            </div>
-          </div>
-          <div className="flex justify-end gap-1.5 pt-1">
-            <button
-              type="button"
-              onClick={onCancelEdit}
-              className="inline-flex items-center gap-1 rounded-lg border border-white/15 px-2.5 py-1 text-[11px] font-semibold text-zinc-300 hover:bg-white/5"
-            >
-              <X className="h-3 w-3" /> Cancel
-            </button>
-            <button
-              type="button"
-              disabled={isBusy}
-              onClick={() => onSaveEdit(item)}
-              className="inline-flex items-center gap-1 rounded-lg bg-lime-400 px-3 py-1 text-[11px] font-bold text-zinc-950 hover:bg-lime-300 disabled:opacity-50"
-            >
-              <Check className="h-3 w-3" /> Save
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div className="mt-3.5 flex items-center justify-between border-t border-white/6 pt-2.5 text-[11px] text-zinc-500">
-          <span>Last at {Number(item.lastServiceOdo).toLocaleString('en-IN')} km</span>
-          <div className="flex items-center gap-2.5">
-            <button
-              type="button"
-              onClick={() => onStartEdit(item)}
-              className="inline-flex items-center gap-1 font-semibold text-zinc-400 hover:text-lime-300"
-            >
-              <Pencil className="h-3 w-3" />
-              Edit
-            </button>
-            <button
-              type="button"
-              disabled={isBusy}
-              onClick={() => onResetAtCurrentOdo(item)}
-              title="Mark serviced at current odometer"
-              className="inline-flex items-center gap-1 font-semibold text-zinc-400 hover:text-lime-400 disabled:opacity-50"
-            >
-              <RotateCcw className="h-3 w-3" />
-              Reset
-            </button>
-          </div>
-        </div>
-      )}
+      <div className="mt-3.5 flex items-center justify-between border-t border-white/6 pt-2.5 text-[11px] text-zinc-500">
+        <span>
+          Last at:{' '}
+          <strong className="font-mono text-zinc-300">
+            {effectiveLastOdo.toLocaleString('en-IN')} km
+          </strong>
+        </span>
+        <span className="font-mono text-[10px] font-medium uppercase tracking-wider text-lime-400/80">
+          Monitored
+        </span>
+      </div>
     </div>
   )
 }
 
-export default function MaintenanceHealthCard({
-  items,
-  currentOdo,
-  onUpdateItem,
-}) {
-  const [editingKey, setEditingKey] = useState(null)
-  const [editValues, setEditValues] = useState({
-    intervalKm: 3000,
-    lastServiceOdo: 0,
-  })
-  const [busyKey, setBusyKey] = useState(null)
-
-  const startEdit = (item) => {
-    setEditingKey(item.itemKey)
-    setEditValues({
-      intervalKm: item.intervalKm,
-      lastServiceOdo: item.lastServiceOdo,
-    })
-  }
-
-  const saveEdit = async (item) => {
-    setBusyKey(item.itemKey)
-    try {
-      await onUpdateItem(item, {
-        intervalKm: Number(editValues.intervalKm),
-        lastServiceOdo: Number(editValues.lastServiceOdo),
-      })
-      setEditingKey(null)
-    } finally {
-      setBusyKey(null)
-    }
-  }
-
-  const resetAtCurrentOdo = async (item) => {
-    setBusyKey(item.itemKey)
-    try {
-      await onUpdateItem(item, {
-        lastServiceOdo: currentOdo,
-      })
-    } finally {
-      setBusyKey(null)
-    }
-  }
-
+export default function MaintenanceHealthCard({ items = [], currentOdo = 0 }) {
   return (
     <section className="rounded-3xl border border-white/10 bg-[#0d1014] p-5 shadow-2xl sm:p-7">
       <div className="flex flex-col gap-2 border-b border-white/8 pb-4 sm:flex-row sm:items-center sm:justify-between">
@@ -298,14 +190,6 @@ export default function MaintenanceHealthCard({
             key={item.itemKey}
             item={item}
             currentOdo={currentOdo}
-            isEditing={editingKey === item.itemKey}
-            isBusy={busyKey === item.itemKey}
-            editValues={editValues}
-            setEditValues={setEditValues}
-            onStartEdit={startEdit}
-            onCancelEdit={() => setEditingKey(null)}
-            onSaveEdit={saveEdit}
-            onResetAtCurrentOdo={resetAtCurrentOdo}
           />
         ))}
       </div>

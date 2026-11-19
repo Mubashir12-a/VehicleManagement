@@ -3,9 +3,9 @@ import { useLocation } from 'react-router-dom'
 
 const routeTitles = {
   '/': 'Dashboard',
-  '/vehicles': 'My Vehicle & Visuals',
   '/fuel-history': 'Fuel Refill History',
   '/maintenance': 'Maintenance Schedule',
+  '/important-dates': 'Important Dates & Reminders',
   '/analytics': 'Vehicle Analytics',
   '/settings': 'System Settings',
 }
