@@ -1,6 +1,6 @@
 # MKD — Mobility Keeper Digital 🚗🏍️
 
-![MKD Logo](Version_1.0.0/public/logo-transparent.png)
+![MKD Logo](public/logo-transparent.png)
 
 > **MKD (Mobility Keeper — Digital)** is a modern, high-performance vehicle telemetry, fuel consumption analytics, and preventive maintenance tracking application built for motorcycles and cars.
 
