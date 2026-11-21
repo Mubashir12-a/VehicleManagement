@@ -3,6 +3,7 @@ import {
   FileText,
   Fuel,
   Info,
+  Sparkles,
   TrendingUp,
   Wrench,
 } from 'lucide-react'
@@ -14,6 +15,7 @@ const CATEGORY_COLORS = {
   Maintenance: 'text-amber-400 bg-amber-400/10 border-amber-400/20',
   Repairs: 'text-rose-400 bg-rose-400/10 border-rose-400/20',
   'Periodic Service': 'text-cyan-400 bg-cyan-400/10 border-cyan-400/20',
+  'Accessories & Mods': 'text-fuchsia-400 bg-fuchsia-400/10 border-fuchsia-400/20',
 }
 
 export default function AnimatedInvestmentChart({
@@ -251,6 +253,12 @@ export default function AnimatedInvestmentChart({
               {Number(activeHover.repairsCost) > 0 && (
                 <span className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1 font-semibold ${CATEGORY_COLORS.Repairs}`}>
                   Repairs: ₹{Number(activeHover.repairsCost).toLocaleString('en-IN')}
+                </span>
+              )}
+              {Number(activeHover.modsCost) > 0 && (
+                <span className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1 font-semibold ${CATEGORY_COLORS['Accessories & Mods']}`}>
+                  <Sparkles className="h-3 w-3" />
+                  Accessories: ₹{Number(activeHover.modsCost).toLocaleString('en-IN')}
                 </span>
               )}
               {Number(activeHover.totalCost) === 0 && (

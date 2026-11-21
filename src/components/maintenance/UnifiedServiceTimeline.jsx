@@ -11,6 +11,7 @@ export default function UnifiedServiceTimeline({
   items = [],
   serviceLogs = [],
   repairs = [],
+  serviceReminders = [],
 }) {
   const [filterType, setFilterType] = useState('All')
 
@@ -53,17 +54,40 @@ export default function UnifiedServiceTimeline({
       })
     })
 
+    ;(serviceReminders || [])
+      .filter((r) => r.status === 'Completed')
+      .forEach((rem) => {
+        list.push({
+          id: rem.id,
+          type: 'periodic_service',
+          title: rem.title || 'Periodic Inspection',
+          date: rem.completedDate || rem.dueDate,
+          odometerKm: rem.completedOdometerKm || 0,
+          cost: Number(rem.amountPaid) || 0,
+          notes:
+            rem.notes ||
+            (rem.serviceCenter
+              ? `At: ${rem.serviceCenter}`
+              : rem.invoiceNo
+                ? `Invoice: ${rem.invoiceNo}`
+                : ''),
+          badge: rem.serviceType || 'Periodic Service',
+        })
+      })
+
     return list.sort((a, b) => {
       const dateA = new Date(a.date).getTime()
       const dateB = new Date(b.date).getTime()
       if (dateB !== dateA) return dateB - dateA
-      return b.odometerKm - a.odometerKm
+      return (b.odometerKm || 0) - (a.odometerKm || 0)
     })
-  }, [serviceLogs, repairs, labelMap])
+  }, [serviceLogs, repairs, serviceReminders, labelMap])
 
   const filteredEvents = useMemo(() => {
     if (filterType === 'Services') {
-      return timelineEvents.filter((e) => e.type === 'component_service')
+      return timelineEvents.filter(
+        (e) => e.type === 'component_service' || e.type === 'periodic_service',
+      )
     }
     if (filterType === 'Repairs') {
       return timelineEvents.filter((e) => e.type === 'repair')
@@ -125,15 +149,17 @@ export default function UnifiedServiceTimeline({
                   {/* Timeline Dot */}
                   <div
                     className={`absolute -left-6 mt-1 flex h-5 w-5 items-center justify-center rounded-full ring-4 ring-[#0d1014] ${
-                      event.type === 'component_service'
-                        ? 'bg-lime-400 text-zinc-950'
-                        : 'bg-amber-400 text-zinc-950'
+                      event.type === 'periodic_service'
+                        ? 'bg-cyan-400 text-zinc-950'
+                        : event.type === 'component_service'
+                          ? 'bg-lime-400 text-zinc-950'
+                          : 'bg-amber-400 text-zinc-950'
                     }`}
                   >
-                    {event.type === 'component_service' ? (
-                      <Wrench className="h-2.5 w-2.5" />
-                    ) : (
+                    {event.type === 'repair' ? (
                       <ShieldAlert className="h-2.5 w-2.5" />
+                    ) : (
+                      <Wrench className="h-2.5 w-2.5" />
                     )}
                   </div>
 
@@ -145,9 +171,11 @@ export default function UnifiedServiceTimeline({
                           <h4 className="font-bold text-white">{event.title}</h4>
                           <span
                             className={`rounded-full px-2 py-0.2 text-[10px] font-bold uppercase tracking-wider ${
-                              event.type === 'component_service'
-                                ? 'bg-lime-400/10 text-lime-300 ring-1 ring-lime-400/25'
-                                : 'bg-amber-400/10 text-amber-300 ring-1 ring-amber-400/25'
+                              event.type === 'periodic_service'
+                                ? 'bg-cyan-400/10 text-cyan-300 ring-1 ring-cyan-400/25'
+                                : event.type === 'component_service'
+                                  ? 'bg-lime-400/10 text-lime-300 ring-1 ring-lime-400/25'
+                                  : 'bg-amber-400/10 text-amber-300 ring-1 ring-amber-400/25'
                             }`}
                           >
                             {event.badge}

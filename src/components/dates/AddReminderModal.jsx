@@ -1,4 +1,10 @@
-import { AlertCircle, Bell, Calendar, Check, Clock, Gauge, X } from 'lucide-react'
+import {
+  AlertCircle,
+  Bell,
+  Check,
+  Clock,
+  X,
+} from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { addDaysToDate } from './datesUtils'
 
@@ -16,31 +22,36 @@ function getExistingServiceNumbers(reminders = []) {
 
 function AddReminderDialogContent({
   existingReminders = [],
+  vehicle = null,
   onClose,
   onSubmit,
 }) {
+  const vehiclePurchaseDate = vehicle?.purchaseDate || ''
+
   const existingNums = useMemo(
     () => getExistingServiceNumbers(existingReminders),
     [existingReminders],
   )
 
-  // Strict sequential rule: 1, 2, 3, 4, 5, 6...
-  const nextRequiredNumber = useMemo(() => {
+  const defaultNextNumber = useMemo(() => {
     if (existingNums.length === 0) return 1
     return Math.max(...existingNums) + 1
   }, [existingNums])
 
-  const [serviceNumber, setServiceNumber] = useState(String(nextRequiredNumber))
+  const [serviceNumber, setServiceNumber] = useState(String(defaultNextNumber))
   const [serviceType, setServiceType] = useState('Free Service')
 
-  // Due Date From (Start Date) - No initial date pre-filled
-  const [dueDateFrom, setDueDateFrom] = useState('')
+  // Toggle: follow purchase date duration vs custom start date
+  const [followPurchaseDate, setFollowPurchaseDate] = useState(
+    Boolean(vehiclePurchaseDate),
+  )
+  const [customStartDate, setCustomStartDate] = useState('')
 
-  // Duration Min & Max (Days) - No default values, just 0 - 0
+  // Duration Min & Max (Days)
   const [durationDaysMin, setDurationDaysMin] = useState('')
   const [durationDaysMax, setDurationDaysMax] = useState('')
 
-  // Odometer Min & Max (km) - No default values, just 0 - 0
+  // Odometer Min & Max (km)
   const [dueOdometerKm, setDueOdometerKm] = useState('')
   const [dueOdometerMaxKm, setDueOdometerMaxKm] = useState('')
 
@@ -48,10 +59,17 @@ function AddReminderDialogContent({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState(null)
 
+  const effectiveStartDate = followPurchaseDate
+    ? vehiclePurchaseDate
+    : customStartDate
+
   // Live calculated target dates
-  const calculatedTargetDateMin = addDaysToDate(dueDateFrom, durationDaysMin)
+  const calculatedTargetDateMin = addDaysToDate(
+    effectiveStartDate,
+    durationDaysMin,
+  )
   const calculatedTargetDateMax = addDaysToDate(
-    dueDateFrom,
+    effectiveStartDate,
     durationDaysMax || durationDaysMin,
   )
 
@@ -59,41 +77,46 @@ function AddReminderDialogContent({
     e.preventDefault()
     setError(null)
 
-    const num = parseInt(serviceNumber, 10)
-    if (!serviceNumber || isNaN(num) || num <= 0) {
-      setError('Please enter a valid numerical service number.')
+    const cleaned = serviceNumber.trim()
+    if (!cleaned) {
+      setError('Please enter a service number or name.')
       return
     }
 
-    // Strict sequential validation: services must strictly follow consecutive numbers
-    if (num !== nextRequiredNumber) {
+    const title = /^\d+$/.test(cleaned) ? `Service ${cleaned}` : cleaned
+
+    if (durationDaysMin && followPurchaseDate && !vehiclePurchaseDate) {
       setError(
-        `Services must follow sequential numbers (1, 2, 3...). Next required is Service ${nextRequiredNumber}.`,
+        'No purchase date found in vehicle profile. Please set vehicle purchase date in Dashboard or turn off the toggle to use a custom start date.',
       )
       return
     }
 
-    if (durationDaysMin && !dueDateFrom) {
-      setError('Please select a Due Date (From) when specifying duration days.')
+    if (durationDaysMin && !followPurchaseDate && !customStartDate) {
+      setError(
+        'Please select a start date when not following vehicle purchase date.',
+      )
       return
     }
 
-    if (dueDateFrom && (!durationDaysMin || Number(durationDaysMin) <= 0)) {
+    if (effectiveStartDate && (!durationDaysMin || Number(durationDaysMin) <= 0)) {
       setError('Please specify minimum duration in days.')
       return
     }
 
     if (!durationDaysMin && !dueOdometerKm) {
-      setError('Please provide at least a Target Duration (Days) or Target Odometer (km).')
+      setError(
+        'Please provide at least a Target Duration (Days) or Target Odometer (km).',
+      )
       return
     }
 
     setIsSubmitting(true)
     try {
       await onSubmit({
-        title: `Service ${num}`,
+        title,
         serviceType,
-        dueDateFrom: dueDateFrom || null,
+        dueDateFrom: effectiveStartDate || null,
         durationDaysMin: durationDaysMin ? Number(durationDaysMin) : null,
         durationDaysMax: durationDaysMax
           ? Number(durationDaysMax)
@@ -135,7 +158,7 @@ function AddReminderDialogContent({
                 Add Service Reminder
               </h3>
               <p className="text-xs text-zinc-400">
-                Schedule service intervals and get notified when duration or odometer milestones are reached
+                Schedule service intervals for your vehicle
               </p>
             </div>
           </div>
@@ -161,27 +184,23 @@ function AddReminderDialogContent({
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400">
-                Service Number *
+                Service Number / Name *
               </label>
               <div className="mt-1.5 flex items-center gap-2">
                 <input
                   type="text"
-                  inputMode="numeric"
                   required
                   value={serviceNumber}
-                  onChange={(e) => {
-                    const cleanVal = e.target.value.replace(/\D/g, '')
-                    setServiceNumber(cleanVal)
-                  }}
+                  onChange={(e) => setServiceNumber(e.target.value)}
+                  placeholder="e.g. 1, 2, 6"
                   className="w-full rounded-xl border border-white/10 bg-[#12161c] px-3.5 py-2.5 font-mono text-sm font-bold text-white focus:border-lime-400 focus:outline-none focus:ring-1 focus:ring-lime-400"
                 />
                 <span className="shrink-0 rounded-xl border border-lime-400/25 bg-lime-400/10 px-3 py-2.5 text-xs font-black text-lime-400">
-                  Service #{serviceNumber || nextRequiredNumber}
+                  {/^\d+$/.test(serviceNumber.trim())
+                    ? `Service #${serviceNumber.trim()}`
+                    : serviceNumber.trim() || 'Service'}
                 </span>
               </div>
-              <p className="mt-1 text-[11px] text-zinc-500">
-                Next scheduled service: <strong>Service {nextRequiredNumber}</strong>
-              </p>
             </div>
 
             <div>
@@ -199,118 +218,117 @@ function AddReminderDialogContent({
             </div>
           </div>
 
-          {/* Duration Window (Due Date From & Duration Min/Max Days: 0 - 0) */}
-          <div className="rounded-2xl border border-white/8 bg-[#12161c] p-4 space-y-3.5">
-            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-lime-400">
-              <Calendar className="h-4 w-4" />
-              Duration Window
+          {/* Toggle: Follow Purchase Date Duration */}
+          <div className="flex items-center justify-between rounded-2xl border border-white/8 bg-[#12161c] p-3.5">
+            <div>
+              <span className="text-xs font-bold text-white">
+                Follow Purchase Date Duration
+              </span>
+              <p className="text-[11px] text-zinc-400">
+                {followPurchaseDate
+                  ? vehiclePurchaseDate
+                    ? `Using profile purchase date (${vehiclePurchaseDate})`
+                    : 'No purchase date found in vehicle profile'
+                  : 'Use custom start date'}
+              </p>
             </div>
-
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <div>
-                <label className="block text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
-                  Due Date (From)
-                </label>
-                <input
-                  type="date"
-                  value={dueDateFrom}
-                  onChange={(e) => setDueDateFrom(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-white/10 bg-[#0d1014] px-3.5 py-2 font-mono text-sm text-white focus:border-lime-400 focus:outline-none focus:ring-1 focus:ring-lime-400"
-                />
-                <span className="mt-0.5 block text-[10px] text-zinc-500">
-                  dd-mm-yyyy
-                </span>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
-                  Duration Min (Days)
-                </label>
-                <input
-                  type="number"
-                  min={1}
-                  value={durationDaysMin}
-                  onChange={(e) => setDurationDaysMin(e.target.value)}
-                  placeholder="0"
-                  className="mt-1 w-full rounded-xl border border-white/10 bg-[#0d1014] px-3.5 py-2 font-mono text-sm text-white focus:border-lime-400 focus:outline-none focus:ring-1 focus:ring-lime-400"
-                />
-                <span className="mt-0.5 block text-[10px] text-zinc-500">
-                  Min milestone (0)
-                </span>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
-                  Duration Max (Days)
-                </label>
-                <input
-                  type="number"
-                  min={1}
-                  value={durationDaysMax}
-                  onChange={(e) => setDurationDaysMax(e.target.value)}
-                  placeholder="0"
-                  className="mt-1 w-full rounded-xl border border-white/10 bg-[#0d1014] px-3.5 py-2 font-mono text-sm text-white focus:border-lime-400 focus:outline-none focus:ring-1 focus:ring-lime-400"
-                />
-                <span className="mt-0.5 block text-[10px] text-zinc-500">
-                  Max overdue threshold (0)
-                </span>
-              </div>
-            </div>
-
-            {calculatedTargetDateMin && (
-              <div className="flex items-center justify-between rounded-xl border border-lime-400/20 bg-lime-400/5 px-3.5 py-2 text-xs">
-                <span className="text-zinc-400">Calculated Service Window:</span>
-                <span className="font-mono font-bold text-lime-300">
-                  {calculatedTargetDateMin}
-                  {calculatedTargetDateMax && calculatedTargetDateMax !== calculatedTargetDateMin
-                    ? ` to ${calculatedTargetDateMax}`
-                    : ''}
-                </span>
-              </div>
-            )}
+            <label className="relative inline-flex cursor-pointer items-center">
+              <input
+                type="checkbox"
+                checked={followPurchaseDate}
+                onChange={(e) => setFollowPurchaseDate(e.target.checked)}
+                className="peer sr-only"
+              />
+              <div className="peer h-6 w-11 rounded-full bg-white/10 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-zinc-400 after:transition-all after:content-[''] peer-checked:bg-lime-400 peer-checked:after:translate-x-full peer-checked:after:bg-zinc-950 peer-focus:outline-none" />
+            </label>
           </div>
 
-          {/* Odometer Window (Min & Max km: 0 - 0) */}
-          <div className="rounded-2xl border border-white/8 bg-[#12161c] p-4 space-y-3.5">
-            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-lime-400">
-              <Gauge className="h-4 w-4" />
-              Odometer Window (km)
+          {/* Custom Start Date (shown only if toggle is OFF) */}
+          {!followPurchaseDate && (
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400">
+                Start Date
+              </label>
+              <input
+                type="date"
+                value={customStartDate}
+                onChange={(e) => setCustomStartDate(e.target.value)}
+                className="mt-1.5 w-full rounded-xl border border-white/10 bg-[#12161c] px-3.5 py-2.5 font-mono text-sm text-white focus:border-lime-400 focus:outline-none focus:ring-1 focus:ring-lime-400"
+              />
+            </div>
+          )}
+
+          {/* Duration Window */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400">
+                Duration Min (Days)
+              </label>
+              <input
+                type="number"
+                min={1}
+                value={durationDaysMin}
+                onChange={(e) => setDurationDaysMin(e.target.value)}
+                placeholder="e.g. 30"
+                className="mt-1.5 w-full rounded-xl border border-white/10 bg-[#12161c] px-3.5 py-2.5 font-mono text-sm text-white focus:border-lime-400 focus:outline-none focus:ring-1 focus:ring-lime-400"
+              />
             </div>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div>
-                <label className="block text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
-                  Odometer Min (km)
-                </label>
-                <input
-                  type="number"
-                  min={0}
-                  value={dueOdometerKm}
-                  onChange={(e) => setDueOdometerKm(e.target.value)}
-                  placeholder="0"
-                  className="mt-1 w-full rounded-xl border border-white/10 bg-[#0d1014] px-3.5 py-2 font-mono text-sm text-white focus:border-lime-400 focus:outline-none focus:ring-1 focus:ring-lime-400"
-                />
-                <span className="mt-0.5 block text-[10px] text-zinc-500">
-                  Min milestone (0)
-                </span>
-              </div>
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400">
+                Duration Max (Days)
+              </label>
+              <input
+                type="number"
+                min={1}
+                value={durationDaysMax}
+                onChange={(e) => setDurationDaysMax(e.target.value)}
+                placeholder="e.g. 45"
+                className="mt-1.5 w-full rounded-xl border border-white/10 bg-[#12161c] px-3.5 py-2.5 font-mono text-sm text-white focus:border-lime-400 focus:outline-none focus:ring-1 focus:ring-lime-400"
+              />
+            </div>
+          </div>
 
-              <div>
-                <label className="block text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
-                  Odometer Max (km)
-                </label>
-                <input
-                  type="number"
-                  min={0}
-                  value={dueOdometerMaxKm}
-                  onChange={(e) => setDueOdometerMaxKm(e.target.value)}
-                  placeholder="0"
-                  className="mt-1 w-full rounded-xl border border-white/10 bg-[#0d1014] px-3.5 py-2 font-mono text-sm text-white focus:border-lime-400 focus:outline-none focus:ring-1 focus:ring-lime-400"
-                />
-                <span className="mt-0.5 block text-[10px] text-zinc-500">
-                  Max overdue threshold (0)
-                </span>
-              </div>
+          {calculatedTargetDateMin && (
+            <div className="flex items-center justify-between rounded-xl border border-lime-400/20 bg-lime-400/5 px-3.5 py-2 text-xs">
+              <span className="text-zinc-400">Calculated Service Window:</span>
+              <span className="font-mono font-bold text-lime-300">
+                {calculatedTargetDateMin}
+                {calculatedTargetDateMax && calculatedTargetDateMax !== calculatedTargetDateMin
+                  ? ` to ${calculatedTargetDateMax}`
+                  : ''}
+              </span>
+            </div>
+          )}
+
+          {/* Odometer Window */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400">
+                Odometer Min (km)
+              </label>
+              <input
+                type="number"
+                min={0}
+                value={dueOdometerKm}
+                onChange={(e) => setDueOdometerKm(e.target.value)}
+                placeholder="e.g. 500"
+                className="mt-1.5 w-full rounded-xl border border-white/10 bg-[#12161c] px-3.5 py-2.5 font-mono text-sm text-white focus:border-lime-400 focus:outline-none focus:ring-1 focus:ring-lime-400"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400">
+                Odometer Max (km)
+              </label>
+              <input
+                type="number"
+                min={0}
+                value={dueOdometerMaxKm}
+                onChange={(e) => setDueOdometerMaxKm(e.target.value)}
+                placeholder="e.g. 750"
+                className="mt-1.5 w-full rounded-xl border border-white/10 bg-[#12161c] px-3.5 py-2.5 font-mono text-sm text-white focus:border-lime-400 focus:outline-none focus:ring-1 focus:ring-lime-400"
+              />
             </div>
           </div>
 
@@ -323,41 +341,36 @@ function AddReminderDialogContent({
               type="text"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="e.g. Engine oil replacement, chain lubrication, brake adjustment"
+              placeholder="e.g. Engine oil replacement, chain lubrication"
               className="mt-1.5 w-full rounded-xl border border-white/10 bg-[#12161c] px-3.5 py-2.5 text-sm text-white focus:border-lime-400 focus:outline-none focus:ring-1 focus:ring-lime-400"
             />
           </div>
 
           {/* Actions */}
-          <div className="flex items-center justify-between border-t border-white/8 pt-4">
-            <p className="text-[11px] text-zinc-500">
-              Notification bell alerts immediately when either Min Duration or Min Odo is reached.
-            </p>
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={onClose}
-                disabled={isSubmitting}
-                className="rounded-xl border border-white/10 px-4 py-2 text-xs font-bold text-zinc-300 hover:bg-white/5"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-lime-400 px-5 py-2 text-xs font-black text-zinc-950 shadow-[0_0_16px_rgba(163,230,53,0.25)] transition-colors hover:bg-lime-300 disabled:opacity-50"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Clock className="h-3.5 w-3.5 animate-spin" /> Saving...
-                  </>
-                ) : (
-                  <>
-                    <Check className="h-3.5 w-3.5" /> Save Reminder
-                  </>
-                )}
-              </button>
-            </div>
+          <div className="flex items-center justify-end gap-3 border-t border-white/8 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isSubmitting}
+              className="rounded-xl border border-white/10 px-4 py-2 text-xs font-bold text-zinc-300 hover:bg-white/5"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-lime-400 px-5 py-2 text-xs font-black text-zinc-950 shadow-[0_0_16px_rgba(163,230,53,0.25)] transition-colors hover:bg-lime-300 disabled:opacity-50"
+            >
+              {isSubmitting ? (
+                <>
+                  <Clock className="h-3.5 w-3.5 animate-spin" /> Saving...
+                </>
+              ) : (
+                <>
+                  <Check className="h-3.5 w-3.5" /> Save Reminder
+                </>
+              )}
+            </button>
           </div>
         </form>
       </div>
@@ -368,6 +381,7 @@ function AddReminderDialogContent({
 export default function AddReminderModal({
   isOpen,
   existingReminders = [],
+  vehicle = null,
   onClose,
   onSubmit,
 }) {
@@ -376,6 +390,7 @@ export default function AddReminderModal({
   return (
     <AddReminderDialogContent
       existingReminders={existingReminders}
+      vehicle={vehicle}
       onClose={onClose}
       onSubmit={onSubmit}
     />

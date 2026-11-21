@@ -6,6 +6,7 @@ import {
   Clock,
   Gauge,
   MapPin,
+  Pencil,
   Trash2,
   Wrench,
 } from 'lucide-react'
@@ -15,6 +16,7 @@ export default function ServiceReminderCard({
   reminder,
   currentOdo = 0,
   onOpenCompleteModal,
+  onEdit,
   onDelete,
 }) {
   const statusMeta = getReminderStatus(reminder, currentOdo)
@@ -51,7 +53,7 @@ export default function ServiceReminderCard({
   if (!isCompleted && minOdo !== null) {
     const diff = minOdo - currentOdo
     if (diff > 0) {
-      distanceMessage = `${diff.toLocaleString('en-IN')} km left until min target`
+      distanceMessage = `${diff.toLocaleString('en-IN')} km left until target`
     } else if (maxOdo && currentOdo <= maxOdo) {
       distanceMessage = `Within target window (current: ${currentOdo.toLocaleString('en-IN')} km)`
     } else {
@@ -65,10 +67,10 @@ export default function ServiceReminderCard({
     const passed = statusMeta.elapsedDays
     const daysLeft = minDays - passed
     if (daysLeft > 0) {
-      durationMessage = `${daysLeft} days left (${passed}d passed since start)`
+      durationMessage = `${daysLeft} days left (${passed}d passed)`
     } else {
       const daysOver = passed - minDays
-      durationMessage = `Duration reached min (${passed}d passed, +${daysOver}d)`
+      durationMessage = `Duration reached (${passed}d passed, +${daysOver}d)`
     }
   }
 
@@ -258,14 +260,26 @@ export default function ServiceReminderCard({
           </span>
         )}
 
-        <button
-          type="button"
-          onClick={() => onDelete(reminder.id)}
-          className="rounded-lg p-1.5 text-zinc-500 transition-colors hover:bg-rose-500/10 hover:text-rose-400"
-          title="Delete reminder"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </button>
+        <div className="flex items-center gap-1">
+          {onEdit && (
+            <button
+              type="button"
+              onClick={() => onEdit(reminder)}
+              className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-white/10 hover:text-white"
+              title="Edit service details"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => onDelete(reminder.id)}
+            className="rounded-lg p-1.5 text-zinc-500 transition-colors hover:bg-rose-500/10 hover:text-rose-400"
+            title="Delete reminder"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
       </div>
     </div>
   )

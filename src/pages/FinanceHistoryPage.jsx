@@ -48,6 +48,7 @@ export default function FinanceHistoryPage() {
     componentServiceLogs = [],
     vehicleRepairs = [],
     serviceReminders = [],
+    vehicleModifications = [],
     maintenance = [],
     summary = {},
     loading,
@@ -62,10 +63,11 @@ export default function FinanceHistoryPage() {
   // 1. Vehicle Purchase Spend (Ex-Showroom Price)
   const exShowroomPrice = Number(primaryVehicle?.exShowroomPrice) || 0
 
-  // 2. Operational Total Spend (Sum of Fuel + Documents + Services from every single rupee logged)
+  // 2. Operational Total Spend (Sum of Fuel + Documents + Services + Modifications from every single rupee logged)
   const totalFuelSpend = Number(summary?.totalFuelSpend || 0)
   const totalDocumentsSpend = Number(summary?.totalDocumentsSpend || 0)
   const totalServicesSpend = Number(summary?.totalServicesSpend || 0)
+  const totalModificationsSpend = Number(summary?.totalModificationsSpend || 0)
   const totalOperationalSpend = Number(summary?.totalSpendTillNow || 0)
 
   // 3. Lifetime Total Investment (Purchase + Operational Total Spend)
@@ -78,6 +80,7 @@ export default function FinanceHistoryPage() {
   const animFuel = useAnimatedNumber(totalFuelSpend, 850, 0)
   const animDocs = useAnimatedNumber(totalDocumentsSpend, 850, 0)
   const animServices = useAnimatedNumber(totalServicesSpend, 850, 0)
+  const animMods = useAnimatedNumber(totalModificationsSpend, 850, 0)
 
   // 4. Construct Full Unified Transaction Ledger
   const transactions = useMemo(() => {
@@ -245,6 +248,31 @@ export default function FinanceHistoryPage() {
       }
     }
 
+    // 8. Vehicle Modifications & Accessories (Installed only)
+    for (const mod of vehicleModifications) {
+      if (mod.status === 'Installed' || !mod.status) {
+        const cost = Number(mod.cost) || 0
+        if (cost > 0) {
+          const mDate = parseLedgerDate(mod.installedDate || mod.createdAt)
+          list.push({
+            id: `tx-mod-${mod.id}`,
+            type: 'MODIFICATIONS',
+            categoryLabel: 'Accessory / Mod',
+            title: mod.title || 'Accessory',
+            subtitle: `${mod.category || 'Accessory'} · ${mod.brand ? `Brand: ${mod.brand}` : 'Installed Part'}`,
+            amount: cost,
+            dateObj: mDate.dateObj,
+            dateFormatted: mDate.formatted,
+            dateRaw: mDate.raw,
+            odometerKm: mod.odometerKm || null,
+            badgeColor: 'border-fuchsia-400/30 bg-fuchsia-400/10 text-fuchsia-300',
+            icon: Sparkles,
+            isCapitalSpend: false,
+          })
+        }
+      }
+    }
+
     return list
   }, [
     exShowroomPrice,
@@ -254,6 +282,7 @@ export default function FinanceHistoryPage() {
     componentServiceLogs,
     vehicleRepairs,
     serviceReminders,
+    vehicleModifications,
     maintenance,
   ])
 
@@ -299,6 +328,7 @@ export default function FinanceHistoryPage() {
   const pctFuel = ((totalFuelSpend / totalAll) * 100).toFixed(1)
   const pctDocs = ((totalDocumentsSpend / totalAll) * 100).toFixed(1)
   const pctServices = ((totalServicesSpend / totalAll) * 100).toFixed(1)
+  const pctMods = ((totalModificationsSpend / totalAll) * 100).toFixed(1)
 
   return (
     <div className="space-y-6">
@@ -401,10 +431,10 @@ export default function FinanceHistoryPage() {
             </div>
           </div>
           <p className="mt-3 text-3xl font-black tracking-tight text-white tabular-nums">
-            4 <span className="text-lg font-bold text-zinc-500">/ 5 Active</span>
+            5 <span className="text-lg font-bold text-lime-400">/ 5 Active</span>
           </p>
           <p className="mt-1 text-[11px] font-medium text-lime-400">
-            Slot 5 reserved for accessories/upgrades
+            All 5 financial streams fully live & tracked
           </p>
         </div>
       </div>
@@ -543,31 +573,37 @@ export default function FinanceHistoryPage() {
             </div>
           </div>
 
-          {/* Stream 5: Reserved Stream (Accessories & Customizations - Ready to implement later) */}
-          <div className="flex flex-col justify-between rounded-3xl border border-dashed border-white/20 bg-linear-to-b from-white/5 via-[#12161c] to-[#0c0f12] p-5 shadow-xl transition-transform hover:-translate-y-1">
+          {/* Stream 5: Accessories & Modifications Spend */}
+          <div className="flex flex-col justify-between rounded-3xl border border-fuchsia-400/25 bg-linear-to-b from-fuchsia-400/10 via-[#12161c] to-[#0c0f12] p-5 shadow-xl transition-transform hover:-translate-y-1">
             <div>
               <div className="flex items-center justify-between">
-                <span className="rounded-full border border-white/20 bg-white/5 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-zinc-400">
-                  Type 5 · Reserved
+                <span className="rounded-full border border-fuchsia-400/30 bg-fuchsia-400/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-fuchsia-300">
+                  Type 5 · Accessories
                 </span>
-                <Sparkles className="h-4 w-4 text-zinc-500" />
+                <Sparkles className="h-4 w-4 text-fuchsia-400" />
               </div>
-              <h4 className="mt-3 text-sm font-bold text-zinc-300">
-                Accessories & Upgrades
+              <h4 className="mt-3 text-sm font-bold text-white">
+                Accessories & Mods
               </h4>
-              <p className="mt-1 text-2xl font-black text-zinc-500 tabular-nums">
-                ₹0
+              <p className="mt-1 text-2xl font-black text-fuchsia-300 tabular-nums">
+                ₹{Math.round(animMods).toLocaleString('en-IN')}
               </p>
-              <p className="mt-1 text-[11px] leading-relaxed text-zinc-500">
-                Reserved space for aftermarket gear, crash guards, and customizations.
+              <p className="mt-1 text-[11px] leading-relaxed text-zinc-400">
+                Riding gear, covers, protection, electronics & custom add-ons.
               </p>
             </div>
 
             <div className="mt-4 flex items-center justify-between border-t border-white/8 pt-3 text-[11px]">
-              <span className="rounded-md bg-white/5 px-2 py-0.5 font-bold text-zinc-400">
-                Ready for Phase 2
+              <span className="text-zinc-500">
+                {vehicleModifications.filter((m) => m.status === 'Installed' || !m.status).length} items active
               </span>
-              <span className="text-zinc-600">Extensible</span>
+              <Link
+                to="/modifications"
+                className="inline-flex items-center gap-0.5 font-bold text-fuchsia-300 hover:underline"
+              >
+                <span>View</span>
+                <ArrowUpRight className="h-3 w-3" />
+              </Link>
             </div>
           </div>
         </div>
@@ -618,14 +654,21 @@ export default function FinanceHistoryPage() {
             {totalServicesSpend > 0 && (
               <div
                 style={{ width: `${pctServices}%` }}
-                className="h-full rounded-r-full bg-cyan-400 transition-all duration-500"
+                className="h-full bg-cyan-400 transition-all duration-500"
                 title={`Services: ₹${totalServicesSpend.toLocaleString('en-IN')} (${pctServices}%)`}
+              />
+            )}
+            {totalModificationsSpend > 0 && (
+              <div
+                style={{ width: `${pctMods}%` }}
+                className="h-full rounded-r-full bg-fuchsia-400 transition-all duration-500"
+                title={`Accessories: ₹${totalModificationsSpend.toLocaleString('en-IN')} (${pctMods}%)`}
               />
             )}
           </div>
 
           {/* Legend Items */}
-          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
             <div className="flex items-center gap-2">
               <span className="h-3 w-3 rounded-full bg-lime-400 shrink-0" />
               <div className="text-xs">
@@ -655,6 +698,14 @@ export default function FinanceHistoryPage() {
               <div className="text-xs">
                 <span className="text-zinc-400">Services: </span>
                 <strong className="text-white">{pctServices}%</strong>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="h-3 w-3 rounded-full bg-fuchsia-400 shrink-0" />
+              <div className="text-xs">
+                <span className="text-zinc-400">Accessories: </span>
+                <strong className="text-white">{pctMods}%</strong>
               </div>
             </div>
           </div>
@@ -715,6 +766,7 @@ export default function FinanceHistoryPage() {
             { id: 'FUEL', label: 'Fuel Refills' },
             { id: 'DOCUMENTS', label: 'Documents & Legal' },
             { id: 'SERVICES', label: 'Services & Maintenance' },
+            { id: 'MODIFICATIONS', label: 'Accessories & Mods' },
           ].map((tab) => (
             <button
               key={tab.id}

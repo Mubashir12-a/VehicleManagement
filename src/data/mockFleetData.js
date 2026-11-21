@@ -319,6 +319,65 @@ export const defaultVehicleDocuments = [
 
 export const defaultServiceReminders = []
 
+export const defaultVehicleModifications = [
+  {
+    id: 'MOD-001',
+    vehicleCode: 'VH-001',
+    title: 'Engine Crash Guard & Frame Sliders',
+    category: 'Protection',
+    brand: 'Zana Motorcycles',
+    installedDate: '2024-02-10',
+    odometerKm: 250,
+    cost: 3850,
+    installedBy: 'Workshop',
+    status: 'Installed',
+    notes: 'Heavy duty black powder-coated with dual nylon puck sliders',
+    createdAt: '2024-02-10T10:00:00Z',
+  },
+  {
+    id: 'MOD-002',
+    vehicleCode: 'VH-001',
+    title: 'Radiator Grill Guard',
+    category: 'Protection',
+    brand: 'MotoTrend',
+    installedDate: '2024-02-15',
+    odometerKm: 320,
+    cost: 1450,
+    installedBy: 'Self',
+    status: 'Installed',
+    notes: 'Honeycomb laser-cut stainless steel mesh',
+    createdAt: '2024-02-15T11:00:00Z',
+  },
+  {
+    id: 'MOD-003',
+    vehicleCode: 'VH-001',
+    title: 'ECE 22.06 Full Face Helmet',
+    category: 'Riding Gear & Apparel',
+    brand: 'Axor Apex',
+    installedDate: '2024-02-20',
+    odometerKm: null,
+    cost: 4999,
+    installedBy: 'Retail Store / Showroom',
+    status: 'Installed',
+    notes: 'Dual visor, anti-fog pinlock ready, ECE & DOT certified',
+    createdAt: '2024-02-20T12:00:00Z',
+  },
+  {
+    id: 'MOD-004',
+    vehicleCode: 'VH-001',
+    title: 'All-Weather Waterproof Bike Cover',
+    category: 'Vehicle Care & Covers',
+    brand: 'Polco / Raida',
+    installedDate: '2024-02-25',
+    odometerKm: null,
+    cost: 1199,
+    installedBy: 'Online / E-Commerce',
+    status: 'Installed',
+    notes: 'Heavy-duty Oxford fabric with mirror pockets and buckle lock',
+    createdAt: '2024-02-25T14:00:00Z',
+  },
+]
+
 export const fleetSummary = {
   totalVehicles: 1,
   activeVehicles: 1,
@@ -328,6 +387,7 @@ export const fleetSummary = {
   monthlyFuelSpend: 0,
   monthlyMileage: 0,
   fleetUtilization: 0,
+  totalModificationsSpend: 11498,
   totalSpendTillNow: 0,
 }
 

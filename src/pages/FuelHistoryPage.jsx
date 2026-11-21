@@ -79,9 +79,15 @@ export default function FuelHistoryPage() {
     })
   }, [fuelRefills, selectedMonth, selectedFillType, searchQuery])
 
-  // Pure fuel-only statistics
+  // Pure fuel-only statistics with accurate tank-to-tank and efficiency mathematics
   const stats = useMemo(() => {
-    const list = fuelRefills || []
+    const list = [...(fuelRefills || [])].sort((a, b) => {
+      const dateA = String(a.refillDate || '')
+      const dateB = String(b.refillDate || '')
+      if (dateA !== dateB) return dateA.localeCompare(dateB)
+      return (Number(a.odometerKm) || 0) - (Number(b.odometerKm) || 0)
+    })
+
     const totalSpend = list.reduce(
       (sum, r) => sum + (Number(r.amountSpent) || 0),
       0,
@@ -93,18 +99,66 @@ export default function FuelHistoryPage() {
     const avgPrice =
       totalLiters > 0 ? Number((totalSpend / totalLiters).toFixed(2)) : 0
 
-    const currentMonthSpend = monthlyFuelSummary?.currentMonth?.totalSpent || 0
-    const currentMonthLiters = monthlyFuelSummary?.currentMonth?.totalLiters || 0
+    // Tank-to-Tank & Interval efficiency
+    let tankToTankDist = 0
+    let tankToTankLiters = 0
+    let tankToTankSpend = 0
+    let allTripDist = 0
+    let allTripLiters = 0
+    let allTripSpend = 0
+    let bestMileage = 0
+
+    for (let i = 1; i < list.length; i++) {
+      const prev = list[i - 1]
+      const curr = list[i]
+      const dist = Math.max(
+        0,
+        (Number(curr.odometerKm) || 0) - (Number(prev.odometerKm) || 0),
+      )
+      const ltrs = Number(curr.liters) || 0
+      const spnd = Number(curr.amountSpent) || 0
+
+      if (dist > 0 && ltrs > 0) {
+        allTripDist += dist
+        allTripLiters += ltrs
+        allTripSpend += spnd
+        const tripM = Number((dist / ltrs).toFixed(2))
+        if (tripM > bestMileage) bestMileage = tripM
+
+        if (prev.fuelFillType === 'Full Tank' && curr.fuelFillType === 'Full Tank') {
+          tankToTankDist += dist
+          tankToTankLiters += ltrs
+          tankToTankSpend += spnd
+        }
+      }
+    }
+
+    const avgMileage =
+      tankToTankLiters > 0 && tankToTankDist > 0
+        ? Number((tankToTankDist / tankToTankLiters).toFixed(2))
+        : allTripLiters > 0 && allTripDist > 0
+          ? Number((allTripDist / allTripLiters).toFixed(2))
+          : 0
+
+    const costPerKm =
+      tankToTankDist > 0 && tankToTankSpend > 0
+        ? Number((tankToTankSpend / tankToTankDist).toFixed(2))
+        : allTripDist > 0 && allTripSpend > 0
+          ? Number((allTripSpend / allTripDist).toFixed(2))
+          : 0
 
     return {
       totalSpend: Number(totalSpend.toFixed(2)),
       totalLiters: Number(totalLiters.toFixed(2)),
       avgPrice,
+      avgMileage,
+      bestMileage,
+      costPerKm,
+      isTankToTank: tankToTankDist > 0,
       totalEntries: list.length,
-      currentMonthSpend: Number(currentMonthSpend.toFixed(2)),
-      currentMonthLiters: Number(currentMonthLiters.toFixed(2)),
+      trackedDistance: allTripDist,
     }
-  }, [fuelRefills, monthlyFuelSummary])
+  }, [fuelRefills])
 
   // Handlers for Sidebar Fuel Card
   const handleSidebarSubmit = async (formData) => {
@@ -186,8 +240,9 @@ export default function FuelHistoryPage() {
         </div>
       )}
 
-      {/* 4-Stat Strip: PURE FUEL DATA ONLY (No other dashboards) */}
+      {/* 4-Stat Strip: PURE FUEL DATA ONLY */}
       <div className="grid grid-cols-2 gap-3.5 sm:gap-4 lg:grid-cols-4">
+        {/* Card 1: Total Spend */}
         <div className="rounded-2xl border border-white/8 bg-[#0d1014] p-4 shadow-md">
           <span className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500">
             Total Fuel Spend
@@ -200,41 +255,48 @@ export default function FuelHistoryPage() {
           </span>
         </div>
 
+        {/* Card 2: Fuel Efficiency / Mileage */}
         <div className="rounded-2xl border border-lime-400/25 bg-lime-400/5 p-4 shadow-md">
-          <span className="block text-[10px] font-black uppercase tracking-wider text-lime-400">
-            This Month's Fuel
-          </span>
+          <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-wider text-lime-400">
+            <span>Fuel Mileage</span>
+            <span className="rounded bg-lime-400/10 px-1.5 py-0.5 text-[9px] font-bold text-lime-300">
+              {stats.isTankToTank ? 'Tank-to-Tank' : 'Estimated'}
+            </span>
+          </div>
           <span className="mt-1 block font-mono text-2xl font-black text-lime-300 sm:text-3xl">
-            ₹{stats.currentMonthSpend.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+            {stats.avgMileage > 0 ? stats.avgMileage : '—'}{' '}
+            <span className="text-sm font-semibold text-zinc-400">km/L</span>
           </span>
           <span className="mt-1 block text-[11px] text-zinc-400">
-            {stats.currentMonthLiters} Liters filled in {currentMonthData?.label || 'this month'}
+            Peak: <strong className="text-lime-300">{stats.bestMileage > 0 ? `${stats.bestMileage} km/L` : '—'}</strong>
           </span>
         </div>
 
+        {/* Card 3: Running Cost per km */}
         <div className="rounded-2xl border border-white/8 bg-[#0d1014] p-4 shadow-md">
           <span className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500">
-            Total Liters Filled
+            Avg Running Cost
+          </span>
+          <span className="mt-1 block font-mono text-2xl font-black text-emerald-400 sm:text-3xl">
+            {stats.costPerKm > 0 ? `₹${stats.costPerKm}` : '—'}{' '}
+            <span className="text-base font-bold text-zinc-500">/km</span>
+          </span>
+          <span className="mt-1 block text-[11px] text-zinc-400">
+            Fuel cost per km driven
+          </span>
+        </div>
+
+        {/* Card 4: Total Liters & Avg Price */}
+        <div className="rounded-2xl border border-white/8 bg-[#0d1014] p-4 shadow-md">
+          <span className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+            Fuel Pumped & Rate
           </span>
           <span className="mt-1 block font-mono text-2xl font-black text-white sm:text-3xl">
             {stats.totalLiters}{' '}
             <span className="text-base font-bold text-zinc-400">L</span>
           </span>
           <span className="mt-1 block text-[11px] text-zinc-400">
-            Fuel pumped into tank
-          </span>
-        </div>
-
-        <div className="rounded-2xl border border-white/8 bg-[#0d1014] p-4 shadow-md">
-          <span className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500">
-            Avg Fuel Price
-          </span>
-          <span className="mt-1 block font-mono text-2xl font-black text-zinc-200 sm:text-3xl">
-            ₹{stats.avgPrice}{' '}
-            <span className="text-base font-bold text-zinc-500">/L</span>
-          </span>
-          <span className="mt-1 block text-[11px] text-zinc-400">
-            Average price paid per liter
+            ₹{stats.avgPrice}/L avg pump price
           </span>
         </div>
       </div>

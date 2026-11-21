@@ -13,6 +13,7 @@ import {
   defaultServiceReminders,
   defaultVehicle,
   defaultVehicleDocuments,
+  defaultVehicleModifications,
   defaultVehicleRepairs,
   fleetStatusData as mockStatusData,
   fleetSummary as mockSummary,
@@ -28,18 +29,23 @@ import {
   createComponentServiceLogRecord,
   createFuelRefillRecord,
   createServiceReminderRecord,
+  createVehicleModificationRecord,
   createVehicleRepairRecord,
   deleteComponentServiceLogRecord,
   deleteFuelRefillRecord,
   deleteServiceReminderRecord,
   deleteVehicleDocumentRecord,
+  deleteVehicleModificationRecord,
   deleteVehicleRepairRecord,
   fetchFleetData,
   updateFuelRefillRecord,
   updateMaintenanceHealthItem,
   updatePrimaryVehicleRecord,
+  updateServiceReminderRecord,
+  updateVehicleModificationRecord,
   upsertVehicleDocumentRecord,
 } from '../services/fleetService'
+import { sortServiceReminders } from '../components/dates/datesUtils'
 
 const defaultFallback = {
   loading: false,
@@ -56,6 +62,7 @@ const defaultFallback = {
   vehicleRepairs: defaultVehicleRepairs,
   vehicleDocuments: defaultVehicleDocuments,
   serviceReminders: defaultServiceReminders,
+  vehicleModifications: defaultVehicleModifications,
   summary: mockSummary,
   monthlyFuelSummary: computeMonthlyFuelSummary(defaultFuelRefills),
   statusData: mockStatusData,
@@ -77,7 +84,12 @@ const defaultFallback = {
   deleteVehicleDocument: async () => {},
   addServiceReminder: async () => {},
   completeServiceReminder: async () => {},
+  updateServiceReminder: async () => {},
+  editServiceReminder: async () => {},
   deleteServiceReminder: async () => {},
+  addVehicleModification: async () => {},
+  updateVehicleModification: async () => {},
+  deleteVehicleModification: async () => {},
 }
 
 const FleetContext = createContext(defaultFallback)
@@ -93,6 +105,7 @@ function recalculateStateAnalytics(prevState, overrideProps = {}) {
     merged.vehicleRepairs,
     merged.vehicleDocuments,
     merged.serviceReminders,
+    merged.vehicleModifications,
   )
   return {
     ...merged,
@@ -116,6 +129,7 @@ function useProvideFleetData() {
     vehicleRepairs: defaultVehicleRepairs,
     vehicleDocuments: defaultVehicleDocuments,
     serviceReminders: defaultServiceReminders,
+    vehicleModifications: defaultVehicleModifications,
     summary: mockSummary,
     monthlyFuelSummary: computeMonthlyFuelSummary(defaultFuelRefills),
     statusData: mockStatusData,
@@ -376,7 +390,7 @@ function useProvideFleetData() {
       )
       setState((prev) =>
         recalculateStateAnalytics(prev, {
-          serviceReminders: [...(prev.serviceReminders || []), result.reminder],
+          serviceReminders: [...(prev.serviceReminders || []), result.reminder].sort(sortServiceReminders),
         }),
       )
       return result
@@ -397,7 +411,30 @@ function useProvideFleetData() {
             r.id === reminderId
               ? result.reminder || { ...r, ...result.updates }
               : r,
-          ),
+          ).sort(sortServiceReminders),
+        }),
+      )
+      return result
+    },
+    [primaryVehicle],
+  )
+
+  const updateServiceReminder = useCallback(
+    async (reminderId, reminderUpdates) => {
+      const result = await updateServiceReminderRecord(
+        primaryVehicle,
+        reminderId,
+        reminderUpdates,
+      )
+      setState((prev) =>
+        recalculateStateAnalytics(prev, {
+          serviceReminders: (prev.serviceReminders || []).map((r) =>
+            r.id === reminderId
+              ? result.reminder
+                ? { ...r, ...result.reminder }
+                : { ...r, ...reminderUpdates }
+              : r,
+          ).sort(sortServiceReminders),
         }),
       )
       return result
@@ -415,6 +452,66 @@ function useProvideFleetData() {
         recalculateStateAnalytics(prev, {
           serviceReminders: (prev.serviceReminders || []).filter(
             (r) => r.id !== reminderId,
+          ),
+        }),
+      )
+      return result
+    },
+    [primaryVehicle],
+  )
+
+  const addVehicleModification = useCallback(
+    async (modInput) => {
+      const result = await createVehicleModificationRecord(
+        primaryVehicle,
+        modInput,
+      )
+      setState((prev) =>
+        recalculateStateAnalytics(prev, {
+          vehicleModifications: [
+            result.modification,
+            ...(prev.vehicleModifications || []),
+          ],
+        }),
+      )
+      return result
+    },
+    [primaryVehicle],
+  )
+
+  const updateVehicleModification = useCallback(
+    async (modId, updates) => {
+      const result = await updateVehicleModificationRecord(
+        primaryVehicle,
+        modId,
+        updates,
+      )
+      setState((prev) =>
+        recalculateStateAnalytics(prev, {
+          vehicleModifications: (prev.vehicleModifications || []).map((m) =>
+            m.id === modId
+              ? result.modification
+                ? { ...m, ...result.modification }
+                : { ...m, ...updates }
+              : m,
+          ),
+        }),
+      )
+      return result
+    },
+    [primaryVehicle],
+  )
+
+  const deleteVehicleModification = useCallback(
+    async (modId) => {
+      const result = await deleteVehicleModificationRecord(
+        primaryVehicle,
+        modId,
+      )
+      setState((prev) =>
+        recalculateStateAnalytics(prev, {
+          vehicleModifications: (prev.vehicleModifications || []).filter(
+            (m) => m.id !== modId,
           ),
         }),
       )
@@ -442,7 +539,12 @@ function useProvideFleetData() {
     deleteVehicleDocument,
     addServiceReminder,
     completeServiceReminder,
+    updateServiceReminder,
+    editServiceReminder: updateServiceReminder,
     deleteServiceReminder,
+    addVehicleModification,
+    updateVehicleModification,
+    deleteVehicleModification,
   }
 }
 

@@ -10,7 +10,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useFleetData } from '../../hooks/useFleetData'
-import { getExpiryMeta, getReminderStatus } from '../dates/datesUtils'
+import { getExpiryMeta, getReminderStatus, sortServiceReminders } from '../dates/datesUtils'
 
 const routeTitles = {
   '/': 'Dashboard',
@@ -46,6 +46,7 @@ export default function Topbar({ onOpenMenu }) {
         return { ...r, meta }
       })
       .filter((r) => r.meta.isDue)
+      .sort(sortServiceReminders)
   }, [serviceReminders, currentOdo])
 
   // Calculate Expiring / Expired Documents

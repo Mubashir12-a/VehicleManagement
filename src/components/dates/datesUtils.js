@@ -106,7 +106,7 @@ export function addDaysToDate(dateStr, days) {
   return `${yyyy}-${mm}-${dd}`
 }
 
-export function getReminderStatus(reminder, currentOdo = 0) {
+export function getReminderStatus(reminder, currentOdo = 0, defaultStartDate = null) {
   if (reminder.status === 'Completed') {
     return {
       label: 'Completed',
@@ -136,7 +136,7 @@ export function getReminderStatus(reminder, currentOdo = 0) {
     }
   }
 
-  // Duration / Date check
+  // Duration / Date check (measured from vehicle purchase date)
   let isDurationDue = false
   let isDurationOverdue = false
   let elapsedDays = null
@@ -144,7 +144,7 @@ export function getReminderStatus(reminder, currentOdo = 0) {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
-  const fromDateStr = reminder.dueDateFrom || reminder.dueDate
+  const fromDateStr = reminder.dueDateFrom || defaultStartDate || reminder.dueDate
   if (fromDateStr && reminder.durationDaysMin) {
     const from = new Date(fromDateStr + 'T00:00:00')
     if (!isNaN(from.getTime())) {
@@ -180,7 +180,7 @@ export function getReminderStatus(reminder, currentOdo = 0) {
   const reasons = []
   if (isOdoDue && minOdo !== null) {
     reasons.push(
-      `Odometer reached min ${minOdo.toLocaleString('en-IN')} km (Current: ${odo.toLocaleString('en-IN')} km)`,
+      `Odometer reached target ${minOdo.toLocaleString('en-IN')} km (Current: ${odo.toLocaleString('en-IN')} km)`,
     )
   }
   if (isDurationDue) {
@@ -226,4 +226,68 @@ export function getReminderStatus(reminder, currentOdo = 0) {
     reasons: [],
     elapsedDays,
   }
+}
+
+/**
+ * Extracts a numeric service sequence number from reminder title or id.
+ * Handles "Service 1", "Service #2", "1st Service", "#3", "Major Service 4", etc.
+ */
+export function getServiceNumber(reminder) {
+  if (!reminder) return Infinity
+  const title = String(reminder.title || '').trim()
+
+  // Match "Service 1", "Service #1", "#1"
+  const serviceMatch = title.match(/(?:service\s*#?|#)\s*(\d+)/i)
+  if (serviceMatch) {
+    return parseInt(serviceMatch[1], 10)
+  }
+
+  // Match "1st Service", "2nd Service", "3rd Service", "4th Service"
+  const ordinalMatch = title.match(/^(\d+)(?:st|nd|rd|th)?\s*service/i)
+  if (ordinalMatch) {
+    return parseInt(ordinalMatch[1], 10)
+  }
+
+  // Match standalone number in title
+  const anyNumMatch = title.match(/\b(\d+)\b/)
+  if (anyNumMatch) {
+    return parseInt(anyNumMatch[1], 10)
+  }
+
+  return Infinity
+}
+
+/**
+ * Sorts service reminders sequentially: 1, 2, 3, etc.
+ * Uses service number first, then due odometer km, then due date, then title.
+ */
+export function sortServiceReminders(a, b) {
+  if (!a && !b) return 0
+  if (!a) return 1
+  if (!b) return -1
+
+  const numA = getServiceNumber(a)
+  const numB = getServiceNumber(b)
+
+  // 1. Service Number (e.g. Service 1 < Service 2 < Service 3)
+  if (numA !== numB) {
+    return numA - numB
+  }
+
+  // 2. Due Odometer Km ascending
+  const odoA = Number(a.dueOdometerKm) || Number(a.dueOdometerMaxKm) || Infinity
+  const odoB = Number(b.dueOdometerKm) || Number(b.dueOdometerMaxKm) || Infinity
+  if (odoA !== odoB) {
+    return odoA - odoB
+  }
+
+  // 3. Due Date ascending
+  const dateA = a.dueDate || a.dueDateFrom || ''
+  const dateB = b.dueDate || b.dueDateFrom || ''
+  if (dateA && dateB && dateA !== dateB) {
+    return dateA.localeCompare(dateB)
+  }
+
+  // 4. Title fallback
+  return (a.title || '').localeCompare(b.title || '')
 }

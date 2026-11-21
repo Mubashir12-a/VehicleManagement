@@ -366,9 +366,44 @@ create table if not exists public.service_reminders (
 create index if not exists idx_service_reminders_vehicle_status 
   on public.service_reminders (vehicle_code, status, due_date asc);
 
--- Permissions for vehicle_documents and service_reminders
+-- 10. Vehicle modifications & accessories table
+create table if not exists public.vehicle_modifications (
+  id uuid primary key default gen_random_uuid(),
+  vehicle_code text not null references public.vehicles(vehicle_code) on delete cascade,
+  title text not null,
+  category text not null default 'Accessory',
+  brand text,
+  installed_date date default current_date,
+  odometer_km integer check (odometer_km >= 0),
+  cost numeric(10, 2) not null default 0 check (cost >= 0),
+  installed_by text,
+  status text not null default 'Installed' check (status in ('Installed', 'Removed', 'Wishlist')),
+  notes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists idx_vehicle_modifications_vehicle_date 
+  on public.vehicle_modifications (vehicle_code, installed_date desc, created_at desc);
+
+alter table public.vehicle_modifications enable row level security;
+
+drop policy if exists "Allow public read vehicle_modifications" on public.vehicle_modifications;
+create policy "Allow public read vehicle_modifications" on public.vehicle_modifications for select using (true);
+
+drop policy if exists "Allow public insert vehicle_modifications" on public.vehicle_modifications;
+create policy "Allow public insert vehicle_modifications" on public.vehicle_modifications for insert with check (true);
+
+drop policy if exists "Allow public update vehicle_modifications" on public.vehicle_modifications;
+create policy "Allow public update vehicle_modifications" on public.vehicle_modifications for update using (true);
+
+drop policy if exists "Allow public delete vehicle_modifications" on public.vehicle_modifications;
+create policy "Allow public delete vehicle_modifications" on public.vehicle_modifications for delete using (true);
+
+-- Permissions for vehicle_documents, service_reminders, and vehicle_modifications
 grant all on public.vehicle_documents to anon, authenticated, service_role;
 grant all on public.service_reminders to anon, authenticated, service_role;
+grant all on public.vehicle_modifications to anon, authenticated, service_role;
 
 -- Refresh PostgREST schema cache so new columns and tables are available immediately
 notify pgrst, 'reload schema';

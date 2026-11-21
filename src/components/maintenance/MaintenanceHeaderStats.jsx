@@ -13,8 +13,17 @@ export default function MaintenanceHeaderStats({
   items = [],
   serviceLogs = [],
   repairs = [],
+  serviceReminders = [],
 }) {
   const currentOdo = Number(vehicle?.mileage) || 0
+
+  const completedReminders = (serviceReminders || []).filter(
+    (r) => r.status === 'Completed',
+  )
+  const totalRemindersSpent = completedReminders.reduce(
+    (acc, curr) => acc + (Number(curr.amountPaid) || 0),
+    0,
+  )
 
   // Calculate totals
   const totalServiceSpent = serviceLogs.reduce(
@@ -25,7 +34,8 @@ export default function MaintenanceHeaderStats({
     (acc, curr) => acc + (Number(curr.cost) || 0),
     0,
   )
-  const totalSpend = totalServiceSpent + totalRepairsSpent
+  const totalSpend =
+    totalServiceSpent + totalRepairsSpent + totalRemindersSpent
 
   // Component statuses
   let overdueCount = 0
@@ -113,8 +123,8 @@ export default function MaintenanceHeaderStats({
 
         <StatCard
           title="Service History Logs"
-          value={`${serviceLogs.length + repairs.length}`}
-          subtitle={`${serviceLogs.length} services • ${repairs.length} repairs`}
+          value={`${serviceLogs.length + repairs.length + completedReminders.length}`}
+          subtitle={`${completedReminders.length} periodic • ${serviceLogs.length} component • ${repairs.length} repairs`}
           icon={History}
           accent="indigo"
         />

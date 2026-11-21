@@ -7,6 +7,7 @@ import {
   Plus,
   ReceiptText,
   Settings,
+  Sparkles,
   Wrench,
   X,
 } from 'lucide-react'
@@ -19,6 +20,7 @@ const navItems = [
   { label: 'Fuel History', to: '/fuel-history', icon: Fuel },
   { label: 'Maintenance', to: '/maintenance', icon: Wrench },
   { label: 'Important Dates', to: '/important-dates', icon: CalendarClock },
+  { label: 'Accessories & Mods', to: '/modifications', icon: Sparkles },
   { label: 'Analytics', to: '/analytics', icon: BarChart3 },
   { label: 'Finance History', to: '/finance-history', icon: ReceiptText },
   { label: 'Settings', to: '/settings', icon: Settings },

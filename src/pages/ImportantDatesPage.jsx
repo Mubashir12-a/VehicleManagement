@@ -6,18 +6,25 @@ import {
   FileText,
   History,
   IndianRupee,
+  Pencil,
   Plus,
   RefreshCw,
   Trash2,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import PageHeader from '../components/common/PageHeader'
 import AddReminderModal from '../components/dates/AddReminderModal'
 import CompleteServiceModal from '../components/dates/CompleteServiceModal'
-import { getExpiryMeta, getReminderStatus } from '../components/dates/datesUtils'
+import {
+  getExpiryMeta,
+  getReminderStatus,
+  sortServiceReminders,
+} from '../components/dates/datesUtils'
 import DocumentCard from '../components/dates/DocumentCard'
+import EditCompletedServiceModal from '../components/dates/EditCompletedServiceModal'
 import EditDocumentModal from '../components/dates/EditDocumentModal'
+import EditReminderModal from '../components/dates/EditReminderModal'
 import ServiceReminderCard from '../components/dates/ServiceReminderCard'
 import { useFleetData } from '../hooks/useFleetData'
 
@@ -33,6 +40,7 @@ export default function ImportantDatesPage() {
     deleteVehicleDocument,
     addServiceReminder,
     completeServiceReminder,
+    updateServiceReminder,
     deleteServiceReminder,
   } = useFleetData()
 
@@ -52,18 +60,32 @@ export default function ImportantDatesPage() {
   const [docModalState, setDocModalState] = useState({ isOpen: false, doc: null })
   const [isAddReminderOpen, setIsAddReminderOpen] = useState(false)
   const [completeReminderItem, setCompleteReminderItem] = useState(null)
+  const [editCompletedItem, setEditCompletedItem] = useState(null)
+  const [editActiveReminderItem, setEditActiveReminderItem] = useState(null)
 
   const currentOdo = primaryVehicle?.mileage || 0
 
-  // Derived metrics
-  const activeReminders = serviceReminders.filter((r) => r.status !== 'Completed')
-  const completedReminders = serviceReminders
-    .filter((r) => r.status === 'Completed')
-    .sort((a, b) => {
-      const dateA = a.completedDate ? new Date(a.completedDate).getTime() : 0
-      const dateB = b.completedDate ? new Date(b.completedDate).getTime() : 0
-      return dateB - dateA
-    })
+  // Derived metrics - service cards sorted sequentially like 1, 2, 3...
+  const activeReminders = useMemo(
+    () =>
+      (serviceReminders || [])
+        .filter((r) => r.status !== 'Completed')
+        .sort(sortServiceReminders),
+    [serviceReminders],
+  )
+
+  const completedReminders = useMemo(
+    () =>
+      (serviceReminders || [])
+        .filter((r) => r.status === 'Completed')
+        .sort((a, b) => {
+          const dateA = a.completedDate ? new Date(a.completedDate).getTime() : 0
+          const dateB = b.completedDate ? new Date(b.completedDate).getTime() : 0
+          if (dateA !== dateB) return dateB - dateA
+          return sortServiceReminders(a, b)
+        }),
+    [serviceReminders],
+  )
 
   const totalServiceSpend = completedReminders.reduce(
     (sum, r) => sum + (Number(r.amountPaid) || 0),
@@ -142,6 +164,18 @@ export default function ImportantDatesPage() {
 
   const handleConfirmCompleteReminder = async (reminderId, completionInput) => {
     await completeServiceReminder(reminderId, completionInput)
+  }
+
+  const handleOpenEditCompletedService = (service) => {
+    setEditCompletedItem(service)
+  }
+
+  const handleOpenEditActiveReminder = (reminder) => {
+    setEditActiveReminderItem(reminder)
+  }
+
+  const handleUpdateReminder = async (reminderId, updates) => {
+    await updateServiceReminder(reminderId, updates)
   }
 
   const handleDeleteReminder = async (reminderId) => {
@@ -484,6 +518,7 @@ export default function ImportantDatesPage() {
                   reminder={reminder}
                   currentOdo={currentOdo}
                   onOpenCompleteModal={handleOpenCompleteReminder}
+                  onEdit={handleOpenEditActiveReminder}
                   onDelete={handleDeleteReminder}
                 />
               ))}
@@ -576,14 +611,24 @@ export default function ImportantDatesPage() {
                           {service.notes || '—'}
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteReminder(service.id)}
-                            className="rounded-lg p-1.5 text-zinc-500 hover:bg-rose-500/10 hover:text-rose-400"
-                            title="Delete record"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
+                          <div className="flex items-center justify-end gap-1">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditCompletedService(service)}
+                              className="rounded-lg p-1.5 text-zinc-400 hover:bg-white/10 hover:text-white transition-colors"
+                              title="Edit completed service"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteReminder(service.id)}
+                              className="rounded-lg p-1.5 text-zinc-500 hover:bg-rose-500/10 hover:text-rose-400 transition-colors"
+                              title="Delete record"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -606,6 +651,7 @@ export default function ImportantDatesPage() {
       <AddReminderModal
         isOpen={isAddReminderOpen}
         existingReminders={serviceReminders}
+        vehicle={primaryVehicle}
         onClose={() => setIsAddReminderOpen(false)}
         onSubmit={handleSaveReminder}
       />
@@ -616,6 +662,21 @@ export default function ImportantDatesPage() {
         currentMileage={currentOdo}
         onClose={() => setCompleteReminderItem(null)}
         onSubmit={handleConfirmCompleteReminder}
+      />
+
+      <EditCompletedServiceModal
+        isOpen={Boolean(editCompletedItem)}
+        reminder={editCompletedItem}
+        onClose={() => setEditCompletedItem(null)}
+        onSubmit={handleUpdateReminder}
+      />
+
+      <EditReminderModal
+        isOpen={Boolean(editActiveReminderItem)}
+        reminder={editActiveReminderItem}
+        vehicle={primaryVehicle}
+        onClose={() => setEditActiveReminderItem(null)}
+        onSubmit={handleUpdateReminder}
       />
     </div>
   )

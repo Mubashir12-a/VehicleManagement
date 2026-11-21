@@ -1,7 +1,8 @@
-import { Check, Fuel, Plus, RotateCw, Sparkles } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { Check, Fuel, Plus, RotateCw, Sparkles, Zap } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAnimatedNumber } from '../../hooks/useAnimatedNumber'
+import { computeLatestFuelMileage } from '../../services/fleetService'
 
 function getTodayString() {
   const d = new Date()
@@ -103,6 +104,7 @@ function RollingDigitTumbler({ digit, index }) {
 export default function OdometerClusterCard({
   vehicle,
   latestRefill,
+  fuelRefills = [],
   onLogFuelRefill,
   onOpenFuelModal,
 }) {
@@ -111,6 +113,11 @@ export default function OdometerClusterCard({
   const [showRefillForm, setShowRefillForm] = useState(false)
   const [saving, setSaving] = useState(false)
   const [feedback, setFeedback] = useState('')
+
+  const latestMileage = useMemo(
+    () => computeLatestFuelMileage(fuelRefills),
+    [fuelRefills],
+  )
 
   const [formData, setFormData] = useState(() => ({
     odometerKm: vehicle?.mileage || '',
@@ -534,6 +541,12 @@ export default function OdometerClusterCard({
 
         {latestRefill ? (
           <div className="flex items-center gap-3">
+            {latestMileage > 0 && (
+              <span className="inline-flex items-center gap-1 rounded-lg border border-lime-400/25 bg-lime-400/10 px-2.5 py-1 text-xs font-bold text-lime-300 font-mono">
+                <Zap className="h-3 w-3 text-lime-400" />
+                {latestMileage} km/L
+              </span>
+            )}
             <span className="rounded-lg border border-lime-400/25 bg-lime-400/10 px-2.5 py-1 font-bold text-lime-300 font-mono">
               ₹{Number(latestRefill.amountSpent).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
             </span>

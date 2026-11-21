@@ -5,6 +5,7 @@ import {
   defaultServiceReminders,
   defaultVehicle,
   defaultVehicleDocuments,
+  defaultVehicleModifications,
   defaultVehicleRepairs,
   fleetStatusData as mockStatusData,
   maintenanceSchedule as mockMaintenance,
@@ -12,6 +13,7 @@ import {
   vehicleCategoryData as mockCategoryData,
   vehiclesList as mockVehicles,
 } from '../data/mockFleetData'
+import { sortServiceReminders } from '../components/dates/datesUtils'
 import { isSupabaseConfigured, supabase } from '../lib/supabase'
 
 const STATUS_COLORS = {
@@ -207,6 +209,26 @@ function mapServiceReminderRow(row) {
   }
 }
 
+function mapVehicleModificationRow(row) {
+  return {
+    id: row.id,
+    vehicleCode: row.vehicle_code,
+    title: row.title,
+    category: row.category || 'Accessory',
+    brand: row.brand || '',
+    installedDate: row.installed_date || '',
+    odometerKm:
+      row.odometer_km !== null && row.odometer_km !== undefined
+        ? Number(row.odometer_km)
+        : null,
+    cost: Math.max(0, Number(row.cost) || 0),
+    installedBy: row.installed_by || 'Self',
+    status: row.status || 'Installed',
+    notes: row.notes || '',
+    createdAt: row.created_at,
+  }
+}
+
 export function computeMonthlyFuelSummary(fuelRefills = []) {
   const monthMap = new Map()
 
@@ -307,6 +329,7 @@ export function computeFleetAnalytics(
   vehicleRepairs = [],
   vehicleDocuments = [],
   serviceReminders = [],
+  vehicleModifications = [],
 ) {
   const totalVehicles = vehicles.length
   const statusCounts = {
@@ -373,9 +396,19 @@ export function computeFleetAnalytics(
   const totalServicesSpend =
     componentLogsSpend + repairsSpend + remindersSpend + maintenanceLogsSpend
 
+  // 4. Modifications & Accessories Spend (Installed parts only)
+  const totalModificationsSpend = (vehicleModifications || [])
+    .filter((m) => m.status === 'Installed' || !m.status)
+    .reduce((sum, item) => sum + (Number(item.cost) || 0), 0)
+
   // Total operational spend from every single rupee spent everywhere (strictly EXCLUDING bike ex-showroom price)
   const totalSpendTillNow = Number(
-    (totalFuelSpend + totalDocumentsSpend + totalServicesSpend).toFixed(2),
+    (
+      totalFuelSpend +
+      totalDocumentsSpend +
+      totalServicesSpend +
+      totalModificationsSpend
+    ).toFixed(2),
   )
 
   const monthlyFuelSummary = computeMonthlyFuelSummary(fuelRefills)
@@ -399,6 +432,7 @@ export function computeFleetAnalytics(
       totalDocumentsSpend: Number(totalDocumentsSpend.toFixed(2)),
       totalServicesSpend: Number(totalServicesSpend.toFixed(2)),
       totalMaintenanceSpend: Number(totalServicesSpend.toFixed(2)),
+      totalModificationsSpend: Number(totalModificationsSpend.toFixed(2)),
       totalSpendTillNow,
     },
     monthlyFuelSummary,
@@ -483,6 +517,7 @@ export async function fetchFleetData() {
     vehicleRepairs: defaultVehicleRepairs,
     vehicleDocuments: defaultVehicleDocuments,
     serviceReminders: defaultServiceReminders,
+    vehicleModifications: defaultVehicleModifications,
     summary: computeFleetAnalytics(
       mockVehicles,
       mockMonthlyTrends,
@@ -492,6 +527,7 @@ export async function fetchFleetData() {
       defaultVehicleRepairs,
       defaultVehicleDocuments,
       defaultServiceReminders,
+      defaultVehicleModifications,
     ).summary,
     monthlyFuelSummary: computeMonthlyFuelSummary(defaultFuelRefills),
     statusData: mockStatusData,
@@ -514,6 +550,7 @@ export async function fetchFleetData() {
       repairsRes,
       docsRes,
       remindersRes,
+      modsRes,
     ] = await Promise.all([
       supabase
         .from('vehicles')
@@ -558,6 +595,11 @@ export async function fetchFleetData() {
         .select('*')
         .order('status', { ascending: false })
         .order('due_date', { ascending: true }),
+      supabase
+        .from('vehicle_modifications')
+        .select('*')
+        .order('installed_date', { ascending: false })
+        .order('created_at', { ascending: false }),
     ])
 
     const coreError =
@@ -648,7 +690,14 @@ export async function fetchFleetData() {
       ? (remindersRes.data || [])
           .filter((r) => r.vehicle_code === primaryCode)
           .map(mapServiceReminderRow)
-      : defaultServiceReminders
+          .sort(sortServiceReminders)
+      : defaultServiceReminders.slice().sort(sortServiceReminders)
+
+    const vehicleModifications = !modsRes.error
+      ? (modsRes.data || [])
+          .filter((m) => m.vehicle_code === primaryCode)
+          .map(mapVehicleModificationRow)
+      : defaultVehicleModifications
 
     const analytics = computeFleetAnalytics(
       vehicles,
@@ -659,6 +708,7 @@ export async function fetchFleetData() {
       vehicleRepairs,
       vehicleDocuments,
       serviceReminders,
+      vehicleModifications,
     )
 
     return {
@@ -676,6 +726,7 @@ export async function fetchFleetData() {
       vehicleRepairs,
       vehicleDocuments,
       serviceReminders,
+      vehicleModifications,
       ...analytics,
       error: null,
     }
@@ -1510,6 +1561,171 @@ export async function completeServiceReminderRecord(
   }
 }
 
+export async function updateServiceReminderRecord(
+  primaryVehicle,
+  reminderId,
+  updates,
+) {
+  const localUpdated = {
+    id: reminderId,
+    vehicleCode: primaryVehicle.id || 'VH-001',
+    ...(updates.title !== undefined ? { title: updates.title.trim() } : {}),
+    ...(updates.serviceType !== undefined ? { serviceType: updates.serviceType } : {}),
+    ...(updates.dueDateFrom !== undefined ? { dueDateFrom: updates.dueDateFrom || '' } : {}),
+    ...(updates.durationDaysMin !== undefined
+      ? {
+          durationDaysMin:
+            updates.durationDaysMin !== null && updates.durationDaysMin !== ''
+              ? Number(updates.durationDaysMin)
+              : null,
+        }
+      : {}),
+    ...(updates.durationDaysMax !== undefined
+      ? {
+          durationDaysMax:
+            updates.durationDaysMax !== null && updates.durationDaysMax !== ''
+              ? Number(updates.durationDaysMax)
+              : null,
+        }
+      : {}),
+    ...(updates.dueDate !== undefined ? { dueDate: updates.dueDate || '' } : {}),
+    ...(updates.dueDateEnd !== undefined ? { dueDateEnd: updates.dueDateEnd || '' } : {}),
+    ...(updates.dueOdometerKm !== undefined
+      ? {
+          dueOdometerKm:
+            updates.dueOdometerKm !== null && updates.dueOdometerKm !== ''
+              ? Number(updates.dueOdometerKm)
+              : null,
+        }
+      : {}),
+    ...(updates.dueOdometerMaxKm !== undefined
+      ? {
+          dueOdometerMaxKm:
+            updates.dueOdometerMaxKm !== null && updates.dueOdometerMaxKm !== ''
+              ? Number(updates.dueOdometerMaxKm)
+              : null,
+        }
+      : {}),
+    ...(updates.status !== undefined ? { status: updates.status } : {}),
+    ...(updates.completedDate !== undefined
+      ? { completedDate: updates.completedDate || '' }
+      : {}),
+    ...(updates.completedOdometerKm !== undefined
+      ? {
+          completedOdometerKm:
+            updates.completedOdometerKm !== null && updates.completedOdometerKm !== ''
+              ? Number(updates.completedOdometerKm)
+              : null,
+        }
+      : {}),
+    ...(updates.amountPaid !== undefined
+      ? { amountPaid: Math.max(0, Number(updates.amountPaid) || 0) }
+      : {}),
+    ...(updates.serviceCenter !== undefined
+      ? { serviceCenter: (updates.serviceCenter || '').trim() }
+      : {}),
+    ...(updates.invoiceNo !== undefined
+      ? { invoiceNo: (updates.invoiceNo || '').trim() }
+      : {}),
+    ...(updates.notes !== undefined
+      ? { notes: (updates.notes || '').trim() }
+      : {}),
+  }
+
+  if (
+    !isSupabaseConfigured ||
+    !supabase ||
+    String(reminderId).startsWith('REM-')
+  ) {
+    return { reminder: localUpdated, savedToSupabase: false }
+  }
+
+  try {
+    const supabasePayload = {
+      updated_at: new Date().toISOString(),
+    }
+    if (updates.title !== undefined) supabasePayload.title = updates.title.trim()
+    if (updates.serviceType !== undefined) {
+      supabasePayload.service_type = updates.serviceType
+    }
+    if (updates.dueDateFrom !== undefined) {
+      supabasePayload.due_date_from = updates.dueDateFrom || null
+    }
+    if (updates.durationDaysMin !== undefined) {
+      supabasePayload.duration_days_min =
+        updates.durationDaysMin !== null && updates.durationDaysMin !== ''
+          ? Number(updates.durationDaysMin)
+          : null
+    }
+    if (updates.durationDaysMax !== undefined) {
+      supabasePayload.duration_days_max =
+        updates.durationDaysMax !== null && updates.durationDaysMax !== ''
+          ? Number(updates.durationDaysMax)
+          : null
+    }
+    if (updates.dueDate !== undefined) {
+      supabasePayload.due_date = updates.dueDate || null
+    }
+    if (updates.dueDateEnd !== undefined) {
+      supabasePayload.due_date_end = updates.dueDateEnd || null
+    }
+    if (updates.dueOdometerKm !== undefined) {
+      supabasePayload.due_odometer_km =
+        updates.dueOdometerKm !== null && updates.dueOdometerKm !== ''
+          ? Number(updates.dueOdometerKm)
+          : null
+    }
+    if (updates.dueOdometerMaxKm !== undefined) {
+      supabasePayload.due_odometer_max_km =
+        updates.dueOdometerMaxKm !== null && updates.dueOdometerMaxKm !== ''
+          ? Number(updates.dueOdometerMaxKm)
+          : null
+    }
+    if (updates.status !== undefined) supabasePayload.status = updates.status
+    if (updates.completedDate !== undefined) {
+      supabasePayload.completed_date = updates.completedDate || null
+    }
+    if (updates.completedOdometerKm !== undefined) {
+      supabasePayload.completed_odometer_km =
+        updates.completedOdometerKm !== null && updates.completedOdometerKm !== ''
+          ? Number(updates.completedOdometerKm)
+          : null
+    }
+    if (updates.amountPaid !== undefined) {
+      supabasePayload.amount_paid = Math.max(0, Number(updates.amountPaid) || 0)
+    }
+    if (updates.serviceCenter !== undefined) {
+      supabasePayload.service_center = (updates.serviceCenter || '').trim()
+    }
+    if (updates.invoiceNo !== undefined) {
+      supabasePayload.invoice_no = (updates.invoiceNo || '').trim()
+    }
+    if (updates.notes !== undefined) {
+      supabasePayload.notes = (updates.notes || '').trim()
+    }
+
+    const { data, error } = await supabase
+      .from('service_reminders')
+      .update(supabasePayload)
+      .eq('id', reminderId)
+      .select('*')
+      .single()
+
+    if (error) {
+      console.warn('Failed to update service reminder in Supabase:', error.message)
+      return { reminder: localUpdated, savedToSupabase: false }
+    }
+
+    return {
+      reminder: mapServiceReminderRow(data),
+      savedToSupabase: true,
+    }
+  } catch (err) {
+    console.error('Error in updateServiceReminderRecord:', err)
+    return { reminder: localUpdated, savedToSupabase: false }
+  }
+}
+
 export async function deleteServiceReminderRecord(primaryVehicle, reminderId) {
   if (
     !isSupabaseConfigured ||
@@ -1526,4 +1742,264 @@ export async function deleteServiceReminderRecord(primaryVehicle, reminderId) {
     console.error('Error in deleteServiceReminderRecord:', err)
     return { success: false }
   }
+}
+
+export async function createVehicleModificationRecord(
+  primaryVehicle,
+  modInput,
+) {
+  const localMod = {
+    id: `MOD-${Date.now()}`,
+    vehicleCode: primaryVehicle.id || 'VH-001',
+    title: (modInput.title || '').trim() || 'Accessory / Mod',
+    category: modInput.category || 'Accessory',
+    brand: (modInput.brand || '').trim(),
+    installedDate:
+      modInput.installedDate || new Date().toISOString().slice(0, 10),
+    odometerKm:
+      modInput.odometerKm !== null &&
+      modInput.odometerKm !== '' &&
+      modInput.odometerKm !== undefined
+        ? Number(modInput.odometerKm)
+        : null,
+    cost: Math.max(0, Number(modInput.cost) || 0),
+    installedBy: modInput.installedBy || 'Self',
+    status: modInput.status || 'Installed',
+    notes: (modInput.notes || '').trim(),
+    createdAt: new Date().toISOString(),
+  }
+
+  if (!isSupabaseConfigured || !supabase) {
+    return { modification: localMod, savedToSupabase: false }
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('vehicle_modifications')
+      .insert({
+        vehicle_code: primaryVehicle.id || 'VH-001',
+        title: localMod.title,
+        category: localMod.category,
+        brand: localMod.brand || null,
+        installed_date: localMod.installedDate || null,
+        odometer_km: localMod.odometerKm,
+        cost: localMod.cost,
+        installed_by: localMod.installedBy || 'Self',
+        status: localMod.status,
+        notes: localMod.notes || null,
+      })
+      .select('*')
+      .single()
+
+    if (error) {
+      console.warn(
+        'Failed to insert vehicle modification to Supabase:',
+        error.message,
+      )
+      return { modification: localMod, savedToSupabase: false }
+    }
+
+    return {
+      modification: mapVehicleModificationRow(data),
+      savedToSupabase: true,
+    }
+  } catch (err) {
+    console.error('Error in createVehicleModificationRecord:', err)
+    return { modification: localMod, savedToSupabase: false }
+  }
+}
+
+export async function updateVehicleModificationRecord(
+  primaryVehicle,
+  modId,
+  updates,
+) {
+  const localUpdated = {
+    id: modId,
+    ...(updates.title !== undefined ? { title: updates.title.trim() } : {}),
+    ...(updates.category !== undefined ? { category: updates.category } : {}),
+    ...(updates.brand !== undefined
+      ? { brand: (updates.brand || '').trim() }
+      : {}),
+    ...(updates.installedDate !== undefined
+      ? { installedDate: updates.installedDate || '' }
+      : {}),
+    ...(updates.odometerKm !== undefined
+      ? {
+          odometerKm:
+            updates.odometerKm !== null &&
+            updates.odometerKm !== '' &&
+            updates.odometerKm !== undefined
+              ? Number(updates.odometerKm)
+              : null,
+        }
+      : {}),
+    ...(updates.cost !== undefined
+      ? { cost: Math.max(0, Number(updates.cost) || 0) }
+      : {}),
+    ...(updates.installedBy !== undefined
+      ? { installedBy: updates.installedBy || 'Self' }
+      : {}),
+    ...(updates.status !== undefined ? { status: updates.status } : {}),
+    ...(updates.notes !== undefined
+      ? { notes: (updates.notes || '').trim() }
+      : {}),
+  }
+
+  if (
+    !isSupabaseConfigured ||
+    !supabase ||
+    String(modId).startsWith('MOD-')
+  ) {
+    return { modification: localUpdated, savedToSupabase: false }
+  }
+
+  try {
+    const supabasePayload = {
+      updated_at: new Date().toISOString(),
+    }
+    if (updates.title !== undefined) supabasePayload.title = updates.title.trim()
+    if (updates.category !== undefined) {
+      supabasePayload.category = updates.category
+    }
+    if (updates.brand !== undefined) {
+      supabasePayload.brand = (updates.brand || '').trim() || null
+    }
+    if (updates.installedDate !== undefined) {
+      supabasePayload.installed_date = updates.installedDate || null
+    }
+    if (updates.odometerKm !== undefined) {
+      supabasePayload.odometer_km =
+        updates.odometerKm !== null &&
+        updates.odometerKm !== '' &&
+        updates.odometerKm !== undefined
+          ? Number(updates.odometerKm)
+          : null
+    }
+    if (updates.cost !== undefined) {
+      supabasePayload.cost = Math.max(0, Number(updates.cost) || 0)
+    }
+    if (updates.installedBy !== undefined) {
+      supabasePayload.installed_by = updates.installedBy || 'Self'
+    }
+    if (updates.status !== undefined) {
+      supabasePayload.status = updates.status
+    }
+    if (updates.notes !== undefined) {
+      supabasePayload.notes = (updates.notes || '').trim() || null
+    }
+
+    const { data, error } = await supabase
+      .from('vehicle_modifications')
+      .update(supabasePayload)
+      .eq('id', modId)
+      .select('*')
+      .single()
+
+    if (error) {
+      console.warn(
+        'Failed to update vehicle modification in Supabase:',
+        error.message,
+      )
+      return { modification: localUpdated, savedToSupabase: false }
+    }
+
+    return {
+      modification: mapVehicleModificationRow(data),
+      savedToSupabase: true,
+    }
+  } catch (err) {
+    console.error('Error in updateVehicleModificationRecord:', err)
+    return { modification: localUpdated, savedToSupabase: false }
+  }
+}
+
+export async function deleteVehicleModificationRecord(primaryVehicle, modId) {
+  if (
+    !isSupabaseConfigured ||
+    !supabase ||
+    String(modId).startsWith('MOD-')
+  ) {
+    return { success: true }
+  }
+
+  try {
+    await supabase.from('vehicle_modifications').delete().eq('id', modId)
+    return { success: true }
+  } catch (err) {
+    console.error('Error in deleteVehicleModificationRecord:', err)
+    return { success: false }
+  }
+}
+
+/**
+ * Computes the latest fuel mileage (km/L) from the most recent refills.
+ * Prioritizes tank-to-tank intervals (Full Tank -> Full Tank),
+ * followed by full tank spans across intermediate refills,
+ * or the most recent trip ratio.
+ */
+export function computeLatestFuelMileage(fuelRefills = []) {
+  if (!fuelRefills || fuelRefills.length < 2) return 0
+
+  const list = [...fuelRefills].sort((a, b) => {
+    const dateA = String(a.refillDate || '')
+    const dateB = String(b.refillDate || '')
+    if (dateA !== dateB) return dateA.localeCompare(dateB)
+    return (Number(a.odometerKm) || 0) - (Number(b.odometerKm) || 0)
+  })
+
+  if (list.length < 2) return 0
+
+  // 1. Check from newest backwards for direct Full Tank -> Full Tank interval
+  for (let i = list.length - 1; i >= 1; i--) {
+    const curr = list[i]
+    const prev = list[i - 1]
+    const currOdo = Number(curr.odometerKm) || 0
+    const prevOdo = Number(prev.odometerKm) || 0
+    const tripDistance = Math.max(0, currOdo - prevOdo)
+    const liters = Number(curr.liters) || 0
+
+    if (
+      curr.fuelFillType === 'Full Tank' &&
+      prev.fuelFillType === 'Full Tank' &&
+      tripDistance > 0 &&
+      liters > 0
+    ) {
+      return Number((tripDistance / liters).toFixed(2))
+    }
+  }
+
+  // 2. Check for Full Tank spanning across partial top-ups
+  for (let i = list.length - 1; i >= 1; i--) {
+    if (list[i].fuelFillType === 'Full Tank') {
+      let spanLiters = 0
+      for (let k = i; k >= 1; k--) {
+        spanLiters += Number(list[k].liters) || 0
+        if (list[k - 1].fuelFillType === 'Full Tank') {
+          const spanDist =
+            (Number(list[i].odometerKm) || 0) -
+            (Number(list[k - 1].odometerKm) || 0)
+          if (spanDist > 0 && spanLiters > 0) {
+            return Number((spanDist / spanLiters).toFixed(2))
+          }
+        }
+      }
+    }
+  }
+
+  // 3. Fallback: most recent trip ratio with distance > 0 and liters > 0
+  for (let i = list.length - 1; i >= 1; i--) {
+    const curr = list[i]
+    const prev = list[i - 1]
+    const currOdo = Number(curr.odometerKm) || 0
+    const prevOdo = Number(prev.odometerKm) || 0
+    const tripDistance = Math.max(0, currOdo - prevOdo)
+    const liters = Number(curr.liters) || 0
+
+    if (tripDistance > 0 && liters > 0) {
+      return Number((tripDistance / liters).toFixed(2))
+    }
+  }
+
+  return 0
 }

@@ -23,6 +23,7 @@ export default function MaintenancePage() {
     maintenanceItems = [],
     componentServiceLogs = [],
     vehicleRepairs = [],
+    serviceReminders = [],
     source,
     loading,
     refresh,
@@ -111,6 +112,7 @@ export default function MaintenancePage() {
         items={maintenanceItems}
         serviceLogs={componentServiceLogs}
         repairs={vehicleRepairs}
+        serviceReminders={serviceReminders}
       />
 
       {/* 2. Navigation Tabs */}
@@ -151,7 +153,7 @@ export default function MaintenancePage() {
           }`}
         >
           <History className="h-3.5 w-3.5" />
-          Complete Service Logbook ({componentServiceLogs.length + vehicleRepairs.length})
+          Complete Service Logbook ({componentServiceLogs.length + vehicleRepairs.length + serviceReminders.filter((r) => r.status === 'Completed').length})
         </button>
       </div>
 
@@ -179,6 +181,7 @@ export default function MaintenancePage() {
           items={maintenanceItems}
           serviceLogs={componentServiceLogs}
           repairs={vehicleRepairs}
+          serviceReminders={serviceReminders}
         />
       )}
 

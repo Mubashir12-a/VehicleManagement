@@ -8,9 +8,12 @@ import {
   Pencil,
   Wrench,
   X,
+  Zap,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useAnimatedNumber } from '../../hooks/useAnimatedNumber'
+import { computeLatestFuelMileage } from '../../services/fleetService'
 import {
   TWO_WHEELER_SUBTYPES,
   VEHICLE_CATEGORIES,
@@ -23,6 +26,9 @@ export default function VehicleHeroCard({
   summary,
   maintenanceItems = [],
   serviceLogs = [],
+  serviceReminders = [],
+  vehicleRepairs = [],
+  fuelRefills = [],
   onSave,
 }) {
   const [isEditing, setIsEditing] = useState(false)
@@ -50,6 +56,15 @@ export default function VehicleHeroCard({
   const items = maintenanceItems.length > 0 ? maintenanceItems : []
   const totalItems = items.length || 18
 
+  // Completed services calculation (periodic services marked as done + component logs + repairs)
+  const completedReminders = (serviceReminders || []).filter(
+    (r) => r.status === 'Completed',
+  )
+  const totalServicesDone =
+    completedReminders.length +
+    (serviceLogs || []).length +
+    (vehicleRepairs || []).length
+
   let dueCount = 0
   items.forEach((item) => {
     const odoNum = currentOdo
@@ -64,6 +79,10 @@ export default function VehicleHeroCard({
   })
 
   const healthyCount = Math.max(0, totalItems - dueCount)
+  const latestMileage = useMemo(
+    () => computeLatestFuelMileage(fuelRefills),
+    [fuelRefills],
+  )
 
   const startEditing = () => {
     setFormData({
@@ -203,6 +222,17 @@ export default function VehicleHeroCard({
                     {animatedSpeed} KM/H
                   </span>
 
+                  {latestMileage > 0 && (
+                    <Link
+                      to="/fuel-history"
+                      className="inline-flex items-center gap-1.5 rounded-full border border-lime-400/30 bg-lime-400/10 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-lime-300 shadow-[0_0_12px_rgba(163,230,53,0.15)] transition-colors hover:bg-lime-400/20"
+                      title="Latest computed fuel mileage"
+                    >
+                      <Zap className="h-3 w-3 text-lime-400" />
+                      Mileage: {latestMileage} KM/L
+                    </Link>
+                  )}
+
                   {vehicle.purchaseDate && (
                     <span className="inline-flex items-center gap-1.5 rounded-full border border-lime-400/25 bg-lime-400/10 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-lime-300 shadow-[0_0_12px_rgba(163,230,53,0.12)]">
                       <Calendar className="h-3 w-3 text-lime-400" />
@@ -248,6 +278,24 @@ export default function VehicleHeroCard({
                   )}
                 </div>
 
+                {/* Latest Fuel Mileage */}
+                <Link
+                  to="/fuel-history"
+                  className="group/mileage block cursor-pointer transition hover:opacity-90"
+                  title="View Fuel History & Mileage Analytics"
+                >
+                  <Zap className="h-5 w-5 text-lime-400 transition-transform group-hover/mileage:scale-110" />
+                  <p className="mt-2.5 text-2xl font-extrabold tracking-tight text-white tabular-nums">
+                    {latestMileage > 0 ? latestMileage : '—'}{' '}
+                    {latestMileage > 0 && (
+                      <span className="text-base font-medium text-zinc-400">km/L</span>
+                    )}
+                  </p>
+                  <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500 transition-colors group-hover/mileage:text-lime-400">
+                    Fuel Mileage
+                  </p>
+                </Link>
+
                 {/* Health Option (reflects healthy / total, e.g. 18/18, 17/18) */}
                 <div>
                   <Heart
@@ -273,16 +321,22 @@ export default function VehicleHeroCard({
                 </div>
 
                 {/* Services Done */}
-                <div>
-                  <Wrench className="h-5 w-5 text-lime-400" />
+                <Link
+                  to="/important-dates?tab=history"
+                  className="group/svc block transition hover:opacity-90 cursor-pointer"
+                  title="View Completed Services History"
+                >
+                  <Wrench className="h-5 w-5 text-lime-400 group-hover/svc:scale-110 transition-transform" />
                   <p className="mt-2.5 text-2xl font-extrabold tracking-tight text-white tabular-nums">
-                    {(serviceLogs || []).length}{' '}
-                    <span className="text-base font-medium text-zinc-400">logs</span>
+                    {totalServicesDone}{' '}
+                    <span className="text-base font-medium text-zinc-400">
+                      {totalServicesDone === 1 ? 'log' : 'logs'}
+                    </span>
                   </p>
-                  <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+                  <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500 group-hover/svc:text-lime-400 transition-colors">
                     Services Done
                   </p>
-                </div>
+                </Link>
 
                 {/* Fuel Level */}
                 <div>

@@ -7,6 +7,7 @@ import FinanceHistoryPage from './pages/FinanceHistoryPage'
 import FuelHistoryPage from './pages/FuelHistoryPage'
 import ImportantDatesPage from './pages/ImportantDatesPage'
 import MaintenancePage from './pages/MaintenancePage'
+import ModificationsPage from './pages/ModificationsPage'
 import SettingsPage from './pages/SettingsPage'
 
 export default function App() {
@@ -18,6 +19,7 @@ export default function App() {
           <Route path="/fuel-history" element={<FuelHistoryPage />} />
           <Route path="/maintenance" element={<MaintenancePage />} />
           <Route path="/important-dates" element={<ImportantDatesPage />} />
+          <Route path="/modifications" element={<ModificationsPage />} />
           <Route path="/analytics" element={<AnalyticsPage />} />
           <Route path="/finance-history" element={<FinanceHistoryPage />} />
           <Route path="/settings" element={<SettingsPage />} />

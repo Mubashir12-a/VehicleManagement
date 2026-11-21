@@ -6,6 +6,7 @@ import {
   Fuel,
   Layers,
   RefreshCw,
+  Sparkles,
   Wrench,
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
@@ -80,6 +81,7 @@ export default function AnalyticsPage() {
     vehicleRepairs = [],
     serviceReminders = [],
     vehicleDocuments = [],
+    vehicleModifications = [],
     source,
     loading,
     refresh,
@@ -190,6 +192,28 @@ export default function AnalyticsPage() {
       }
     }
 
+    // Vehicle Modifications & Accessories (Installed only)
+    for (const mod of vehicleModifications) {
+      if (mod.status === 'Installed' || !mod.status) {
+        const cost = Number(mod.cost || 0)
+        const parsed = parseExpenseDate(mod.installedDate || mod.createdAt)
+        if (cost > 0 && parsed) {
+          list.push({
+            id: `mod-${mod.id}`,
+            category: 'Accessories & Mods',
+            title: mod.title || 'Accessory',
+            amount: cost,
+            date: parsed.isoDate,
+            year: parsed.year,
+            month: parsed.month,
+            notes: mod.brand
+              ? `${mod.category || 'Accessory'} · Brand: ${mod.brand}`
+              : (mod.notes || 'Accessory / Modification'),
+          })
+        }
+      }
+    }
+
     return list.sort((a, b) => (a.date > b.date ? -1 : 1))
   }, [
     fuelRefills,
@@ -197,6 +221,7 @@ export default function AnalyticsPage() {
     vehicleRepairs,
     serviceReminders,
     vehicleDocuments,
+    vehicleModifications,
   ])
 
   // Purchase year from vehicle profile
@@ -234,6 +259,7 @@ export default function AnalyticsPage() {
       let repairsCost = 0
       let serviceCost = 0
       let documentsCost = 0
+      let modsCost = 0
 
       for (const exp of monthExpenses) {
         if (exp.category === 'Fuel') fuelCost += exp.amount
@@ -241,10 +267,16 @@ export default function AnalyticsPage() {
         else if (exp.category === 'Repairs') repairsCost += exp.amount
         else if (exp.category === 'Periodic Service') serviceCost += exp.amount
         else if (exp.category === 'Documents') documentsCost += exp.amount
+        else if (exp.category === 'Accessories & Mods') modsCost += exp.amount
       }
 
       const totalCost =
-        fuelCost + maintenanceCost + repairsCost + serviceCost + documentsCost
+        fuelCost +
+        maintenanceCost +
+        repairsCost +
+        serviceCost +
+        documentsCost +
+        modsCost
 
       return {
         label: name,
@@ -256,6 +288,7 @@ export default function AnalyticsPage() {
         repairsCost,
         serviceCost,
         documentsCost,
+        modsCost,
         totalCost,
         items: monthExpenses,
       }
@@ -273,6 +306,7 @@ export default function AnalyticsPage() {
       let repairsCost = 0
       let serviceCost = 0
       let documentsCost = 0
+      let modsCost = 0
 
       for (const exp of yearExpenses) {
         if (exp.category === 'Fuel') fuelCost += exp.amount
@@ -280,10 +314,16 @@ export default function AnalyticsPage() {
         else if (exp.category === 'Repairs') repairsCost += exp.amount
         else if (exp.category === 'Periodic Service') serviceCost += exp.amount
         else if (exp.category === 'Documents') documentsCost += exp.amount
+        else if (exp.category === 'Accessories & Mods') modsCost += exp.amount
       }
 
       const totalCost =
-        fuelCost + maintenanceCost + repairsCost + serviceCost + documentsCost
+        fuelCost +
+        maintenanceCost +
+        repairsCost +
+        serviceCost +
+        documentsCost +
+        modsCost
 
       return {
         label: String(yr),
@@ -294,6 +334,7 @@ export default function AnalyticsPage() {
         repairsCost,
         serviceCost,
         documentsCost,
+        modsCost,
         totalCost,
         items: yearExpenses,
       }
@@ -325,6 +366,7 @@ export default function AnalyticsPage() {
     let maint = 0
     let repairs = 0
     let services = 0
+    let mods = 0
 
     for (const d of currentChartData) {
       fuel += d.fuelCost || 0
@@ -332,9 +374,10 @@ export default function AnalyticsPage() {
       maint += d.maintenanceCost || 0
       repairs += d.repairsCost || 0
       services += d.serviceCost || 0
+      mods += d.modsCost || 0
     }
 
-    return { fuel, docs, maint, repairs, services }
+    return { fuel, docs, maint, repairs, services, mods }
   }, [currentChartData])
 
   // Selected period transactions
@@ -511,7 +554,7 @@ export default function AnalyticsPage() {
       />
 
       {/* Detailed Category Investment Cards */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         <div className="rounded-2xl border border-lime-400/15 bg-lime-400/5 p-4">
           <div className="flex items-center gap-2">
             <Fuel className="h-4 w-4 text-lime-400" />
@@ -561,6 +604,16 @@ export default function AnalyticsPage() {
             ₹{categoryTotals.repairs.toLocaleString('en-IN')}
           </div>
         </div>
+
+        <div className="rounded-2xl border border-fuchsia-400/15 bg-fuchsia-400/5 p-4">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-fuchsia-400" />
+            <span className="text-xs font-bold text-zinc-300">Accessories & Mods</span>
+          </div>
+          <div className="mt-2 font-mono text-lg font-black text-fuchsia-400">
+            ₹{categoryTotals.mods.toLocaleString('en-IN')}
+          </div>
+        </div>
       </div>
 
       {/* Selected Period Transactions Ledger */}
@@ -606,7 +659,21 @@ export default function AnalyticsPage() {
                         {item.title}
                       </td>
                       <td className="px-4 py-3">
-                        <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] font-bold text-zinc-300">
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                            item.category === 'Accessories & Mods'
+                              ? 'border border-fuchsia-400/30 bg-fuchsia-400/10 text-fuchsia-300'
+                              : item.category === 'Fuel'
+                                ? 'border border-lime-400/30 bg-lime-400/10 text-lime-300'
+                                : item.category === 'Documents'
+                                  ? 'border border-emerald-400/30 bg-emerald-400/10 text-emerald-300'
+                                  : item.category === 'Maintenance'
+                                    ? 'border border-amber-400/30 bg-amber-400/10 text-amber-300'
+                                    : item.category === 'Periodic Service'
+                                      ? 'border border-cyan-400/30 bg-cyan-400/10 text-cyan-300'
+                                      : 'border border-rose-400/30 bg-rose-400/10 text-rose-300'
+                          }`}
+                        >
                           {item.category}
                         </span>
                       </td>

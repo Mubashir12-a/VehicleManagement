@@ -2,7 +2,7 @@ import { ArrowRight, Bell, Database, RefreshCw } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import PageHeader from '../components/common/PageHeader'
-import { getReminderStatus } from '../components/dates/datesUtils'
+import { getReminderStatus, sortServiceReminders } from '../components/dates/datesUtils'
 import FuelAndMileageChart from '../components/dashboard/FuelAndMileageChart'
 import MaintenanceHealthCard from '../components/dashboard/MaintenanceHealthCard'
 import MonthlyFuelCard from '../components/dashboard/MonthlyFuelCard'
@@ -21,6 +21,7 @@ export default function DashboardPage() {
     maintenanceItems,
     componentServiceLogs = [],
     serviceReminders = [],
+    vehicleRepairs = [],
     monthlyFuelSummary,
     loading,
     source,
@@ -44,6 +45,7 @@ export default function DashboardPage() {
         meta: getReminderStatus(r, currentOdo),
       }))
       .filter((r) => r.meta.isDue)
+      .sort(sortServiceReminders)
   }, [serviceReminders, currentOdo])
 
   return (
@@ -142,6 +144,9 @@ export default function DashboardPage() {
         summary={summary}
         maintenanceItems={maintenanceItems}
         serviceLogs={componentServiceLogs}
+        serviceReminders={serviceReminders}
+        vehicleRepairs={vehicleRepairs}
+        fuelRefills={fuelRefills}
         onSave={updatePrimaryVehicle}
       />
 
@@ -149,6 +154,7 @@ export default function DashboardPage() {
       <OdometerClusterCard
         vehicle={primaryVehicle}
         latestRefill={latestRefill}
+        fuelRefills={fuelRefills}
         onLogFuelRefill={addFuelRefill}
         onOpenFuelModal={() => setIsFuelModalOpen(true)}
       />
