@@ -233,7 +233,7 @@ export default function MonthlyFuelCard({ monthlyFuelSummary }) {
         </div>
 
         <span className="text-[11px] text-zinc-500">
-          Updated live via Supabase
+          Updated with latest refill telemetry
         </span>
       </div>
     </section>

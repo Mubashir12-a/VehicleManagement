@@ -105,10 +105,6 @@ export default function Topbar({ onOpenMenu }) {
       </div>
 
       <div className="flex items-center gap-3">
-        <span className="hidden rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-zinc-400 sm:inline-flex">
-          v1.0.0
-        </span>
-
         {/* Notifications Icon & Popover */}
         <div className="relative" ref={popoverRef}>
           <button

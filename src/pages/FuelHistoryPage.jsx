@@ -164,7 +164,7 @@ export default function FuelHistoryPage() {
   const handleSidebarSubmit = async (formData) => {
     if (editingRefill) {
       await editFuelRefill(editingRefill.id, formData)
-      showNotification('Fuel refill entry updated in Supabase.')
+      showNotification('Fuel refill entry updated successfully.')
       setEditingRefill(null)
     } else {
       await addFuelRefill(formData)

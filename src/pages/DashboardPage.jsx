@@ -1,4 +1,4 @@
-import { ArrowRight, Bell, Database, RefreshCw } from 'lucide-react'
+import { ArrowRight, Bell, RefreshCw } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import PageHeader from '../components/common/PageHeader'
@@ -24,9 +24,6 @@ export default function DashboardPage() {
     vehicleRepairs = [],
     monthlyFuelSummary,
     loading,
-    source,
-    needsSchema,
-    needsSchemaUpgrade,
     error,
     refresh,
     updatePrimaryVehicle,
@@ -55,16 +52,6 @@ export default function DashboardPage() {
         description="Live dashboard with instrument cluster, fuel refills, and component wear tracking."
         actions={
           <div className="flex items-center gap-2.5">
-            <span
-              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
-                source === 'supabase'
-                  ? 'border border-lime-400/30 bg-lime-400/10 text-lime-300 shadow-[0_0_12px_rgba(163,230,53,0.18)]'
-                  : 'border border-amber-400/30 bg-amber-400/10 text-amber-300'
-              }`}
-            >
-              <Database className="h-3.5 w-3.5 text-lime-400" />
-              {source === 'supabase' ? 'Live Supabase' : 'Local Fallback'}
-            </span>
             <button
               type="button"
               onClick={refresh}
@@ -80,25 +67,7 @@ export default function DashboardPage() {
         }
       />
 
-      {(needsSchema || needsSchemaUpgrade) && (
-        <div className="flex flex-col gap-2 rounded-2xl border border-amber-400/30 bg-amber-400/10 p-4 text-xs text-amber-200 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="font-bold">Supabase schema notice</p>
-            <p className="mt-0.5 text-amber-300/80">
-              Run <code className="font-mono font-semibold">supabase/schema.sql</code> to
-              synchronize all tables with Supabase.
-            </p>
-          </div>
-          <Link
-            to="/settings"
-            className="shrink-0 font-bold text-amber-300 underline hover:text-amber-100"
-          >
-            Check Status →
-          </Link>
-        </div>
-      )}
-
-      {!needsSchema && !needsSchemaUpgrade && error && (
+      {error && (
         <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4 text-xs text-rose-300">
           {error}
         </div>

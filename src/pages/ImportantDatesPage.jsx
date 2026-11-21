@@ -1,7 +1,6 @@
 import {
   CalendarClock,
   CheckCircle2,
-  Database,
   FileCheck,
   FileText,
   History,
@@ -33,7 +32,6 @@ export default function ImportantDatesPage() {
     primaryVehicle,
     vehicleDocuments = [],
     serviceReminders = [],
-    source,
     loading,
     refresh,
     upsertVehicleDocument,
@@ -192,16 +190,6 @@ export default function ImportantDatesPage() {
         description="Track vehicle documentation expiration (Insurance, RC, PUC, Warranty) and schedule custom periodic service interval reminders."
         actions={
           <div className="flex flex-wrap items-center gap-2.5">
-            <span
-              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${source === 'supabase'
-                  ? 'border border-lime-400/30 bg-lime-400/10 text-lime-300 shadow-[0_0_12px_rgba(163,230,53,0.18)]'
-                  : 'border border-amber-400/30 bg-amber-400/10 text-amber-300'
-                }`}
-            >
-              <Database className="h-3.5 w-3.5" />
-              {source === 'supabase' ? 'Supabase Connected' : 'Local Storage Mode'}
-            </span>
-
             <button
               type="button"
               onClick={refresh}

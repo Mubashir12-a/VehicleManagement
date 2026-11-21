@@ -1,7 +1,6 @@
 import {
   BarChart3,
   CalendarClock,
-  Database,
   Fuel,
   LayoutDashboard,
   Plus,
@@ -13,7 +12,6 @@ import {
 } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { useFleetData } from '../../hooks/useFleetData'
-import { supabaseConfigStatus } from '../../lib/supabase'
 
 const navItems = [
   { label: 'Dashboard', to: '/', icon: LayoutDashboard, end: true },
@@ -159,32 +157,9 @@ export default function Sidebar({ isOpen, onClose }) {
         </div>
 
         <div className="mt-auto border-t border-white/8 p-4">
-          <div className="rounded-xl border border-white/8 bg-[#12161b] p-3.5">
-            <div className="flex items-center gap-2 text-xs font-semibold text-zinc-200">
-              <Database className="h-3.5 w-3.5 text-lime-400" />
-              <span>Supabase Cloud</span>
-            </div>
-            <p className="mt-1 text-xs text-zinc-500">
-              {supabaseConfigStatus.isConfigured
-                ? 'Live database synced'
-                : 'Using local mock data'}
-            </p>
-            <span
-              className={`mt-2 inline-flex items-center gap-1.5 text-[11px] font-semibold ${
-                supabaseConfigStatus.isConfigured
-                  ? 'text-lime-400'
-                  : 'text-amber-400'
-              }`}
-            >
-              <span
-                className={`h-1.5 w-1.5 rounded-full ${
-                  supabaseConfigStatus.isConfigured
-                    ? 'bg-lime-400 shadow-[0_0_8px_#a3e635]'
-                    : 'bg-amber-400'
-                }`}
-              />
-              {supabaseConfigStatus.isConfigured ? 'Connected' : 'Not Connected'}
-            </span>
+          <div className="flex items-center justify-between text-[11px] text-zinc-500">
+            <span>Garage Telemetry</span>
+            <span className="font-mono text-zinc-400">v1.2.0</span>
           </div>
         </div>
       </aside>

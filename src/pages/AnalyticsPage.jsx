@@ -1,7 +1,6 @@
 import {
   Calendar,
   CheckCircle2,
-  Database,
   FileText,
   Fuel,
   Layers,
@@ -82,7 +81,6 @@ export default function AnalyticsPage() {
     serviceReminders = [],
     vehicleDocuments = [],
     vehicleModifications = [],
-    source,
     loading,
     refresh,
   } = useFleetData()
@@ -394,17 +392,6 @@ export default function AnalyticsPage() {
         description="Comprehensive financial expenditure tracking. Monitor total real money invested per month or combined by year without averaging."
         actions={
           <div className="flex flex-wrap items-center gap-2.5">
-            <span
-              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
-                source === 'supabase'
-                  ? 'border border-lime-400/30 bg-lime-400/10 text-lime-300 shadow-[0_0_12px_rgba(163,230,53,0.18)]'
-                  : 'border border-amber-400/30 bg-amber-400/10 text-amber-300'
-              }`}
-            >
-              <Database className="h-3.5 w-3.5" />
-              {source === 'supabase' ? 'Supabase Connected' : 'Local Storage Mode'}
-            </span>
-
             <button
               type="button"
               onClick={refresh}

@@ -1,4 +1,4 @@
-import { Check, Fuel, Plus, RotateCw, Sparkles, Zap } from 'lucide-react'
+import { Check, Fuel, Plus, Sparkles, Zap } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAnimatedNumber } from '../../hooks/useAnimatedNumber'
@@ -193,7 +193,7 @@ export default function OdometerClusterCard({
     try {
       await onLogFuelRefill(formData)
       setShowRefillForm(false)
-      setFeedback('Fuel refill logged & odometer synced to Supabase.')
+      setFeedback('Fuel refill logged & odometer updated successfully.')
     } catch (err) {
       setFeedback(err.message || 'Could not log fuel refill.')
     } finally {
@@ -213,20 +213,11 @@ export default function OdometerClusterCard({
             </h3>
           </div>
           <p className="mt-1 text-xs text-zinc-400">
-            TFT-style telemetry · Numbers count up & bars cascade on hover · Synced with fuel refills
+            Live vehicle gauges & fuel status
           </p>
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setIsHovered((prev) => !prev)}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-zinc-300 transition-colors hover:border-lime-400/40 hover:bg-lime-400/10 hover:text-lime-300"
-          >
-            <RotateCw className={`h-3.5 w-3.5 ${isHovered ? 'text-lime-400 animate-spin' : ''}`} />
-            {isHovered ? 'Active Sweep' : 'Ignition Test'}
-          </button>
-
           <button
             type="button"
             onClick={

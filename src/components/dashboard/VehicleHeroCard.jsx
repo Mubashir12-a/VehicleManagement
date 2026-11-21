@@ -123,7 +123,7 @@ export default function VehicleHeroCard({
       if (result?.warning) {
         setFeedback(result.warning)
       } else if (result?.savedToSupabase) {
-        setFeedback('Vehicle updated in Supabase.')
+        setFeedback('Vehicle profile updated successfully.')
       }
     } catch (err) {
       setFeedback(err.message || 'Could not save vehicle changes.')
