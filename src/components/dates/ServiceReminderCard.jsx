@@ -11,6 +11,7 @@ import {
   Wrench,
 } from 'lucide-react'
 import { getReminderStatus } from './datesUtils'
+import { formatDisplayDate } from '../../utils/dateFormatter'
 
 export default function ServiceReminderCard({
   reminder,
@@ -144,7 +145,7 @@ export default function ServiceReminderCard({
                 </span>
                 {reminder.dueDateFrom && (
                   <span className="text-[10px] text-zinc-500">
-                    from {reminder.dueDateFrom}
+                    from {formatDisplayDate(reminder.dueDateFrom)}
                   </span>
                 )}
               </div>
@@ -157,9 +158,9 @@ export default function ServiceReminderCard({
                   <Calendar className="h-3 w-3 text-lime-400" /> Target Date:
                 </span>
                 <span className="font-mono text-[11px] font-bold text-zinc-200">
-                  {reminder.dueDate || 'Flexible'}
+                  {reminder.dueDate ? formatDisplayDate(reminder.dueDate) : 'Flexible'}
                   {reminder.dueDateEnd && reminder.dueDateEnd !== reminder.dueDate
-                    ? ` to ${reminder.dueDateEnd}`
+                    ? ` to ${formatDisplayDate(reminder.dueDateEnd)}`
                     : ''}
                 </span>
               </div>
@@ -217,7 +218,7 @@ export default function ServiceReminderCard({
             <div className="flex items-center justify-between">
               <span className="text-zinc-400">Service Date:</span>
               <span className="font-mono text-white">
-                {reminder.completedDate || '—'}
+                {formatDisplayDate(reminder.completedDate)}
               </span>
             </div>
 

@@ -1,10 +1,24 @@
--- FleetCore Vehicle Management System — Single-Vehicle Schema (Two Wheeler & Four Wheeler)
--- Safe to run on a fresh database OR to upgrade your existing Supabase tables.
--- Run this in Supabase Dashboard -> SQL Editor -> New query.
+-- MKD Vehicle Management System — Multi-User Cloud Architecture
+-- Supports individual user accounts, profiles, and complete data isolation via Supabase Auth & PostgreSQL RLS.
+-- Safe to run on a fresh database OR to upgrade existing Supabase tables.
 
--- 1. Vehicles table (create if missing)
+-- 1. Profiles Table (1:1 with auth.users)
+create table if not exists public.profiles (
+  id uuid primary key references auth.users(id) on delete cascade,
+  email text,
+  full_name text,
+  phone text,
+  avatar_url text,
+  bio text,
+  preferences jsonb default '{"currency": "₹", "distanceUnit": "km", "fuelUnit": "L"}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+-- 2. Vehicles Table
 create table if not exists public.vehicles (
   id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade default auth.uid(),
   vehicle_code text unique not null,
   name text not null,
   brand text not null default 'Honda',
@@ -14,7 +28,7 @@ create table if not exists public.vehicles (
   sub_type text not null default 'Scooter'
     check (sub_type in ('Scooter', 'Bike', 'Car')),
   engine_cc integer not null default 110 check (engine_cc > 0),
-  plate text unique not null,
+  plate text not null,
   type text not null default 'Scooter',
   driver text not null default 'Owner',
   status text not null default 'Active'
@@ -30,7 +44,8 @@ create table if not exists public.vehicles (
   created_at timestamptz not null default now()
 );
 
--- Upgrade existing public.vehicles table if created with the earlier schema
+-- Upgrade existing public.vehicles table columns
+alter table public.vehicles add column if not exists user_id uuid references auth.users(id) on delete cascade default auth.uid();
 alter table public.vehicles add column if not exists brand text not null default 'Honda';
 alter table public.vehicles add column if not exists model text not null default 'Activa 6G';
 alter table public.vehicles add column if not exists category text not null default 'Two Wheeler';
@@ -41,20 +56,13 @@ alter table public.vehicles add column if not exists fuel_type text not null def
 alter table public.vehicles add column if not exists purchase_date date default '2024-01-15';
 alter table public.vehicles add column if not exists ex_showroom_price numeric default 0;
 
--- Enforce only 2 categories: Two Wheeler & Four Wheeler
-alter table public.vehicles drop constraint if exists vehicles_category_check;
-alter table public.vehicles
-  add constraint vehicles_category_check
-  check (category in ('Two Wheeler', 'Four Wheeler'));
+-- Drop global unique plate constraint so different users can enter demo or common plates
+alter table public.vehicles drop constraint if exists vehicles_plate_key;
 
-alter table public.vehicles drop constraint if exists vehicles_sub_type_check;
-alter table public.vehicles
-  add constraint vehicles_sub_type_check
-  check (sub_type in ('Scooter', 'Bike', 'Car'));
-
--- 2. Maintenance logs table
+-- 3. Maintenance Logs Table
 create table if not exists public.maintenance_logs (
   id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade default auth.uid(),
   work_order_code text unique not null,
   vehicle_code text not null references public.vehicles(vehicle_code) on delete cascade,
   vehicle_name text not null,
@@ -67,104 +75,25 @@ create table if not exists public.maintenance_logs (
     check (status in ('Scheduled', 'In Progress', 'Completed', 'Overdue')),
   created_at timestamptz not null default now()
 );
+alter table public.maintenance_logs add column if not exists user_id uuid references auth.users(id) on delete cascade default auth.uid();
 
--- 3. Monthly metrics table
+-- 4. Monthly Metrics Table
 create table if not exists public.monthly_fleet_metrics (
   id uuid primary key default gen_random_uuid(),
-  month_label text unique not null,
+  user_id uuid references auth.users(id) on delete cascade default auth.uid(),
+  month_label text not null,
   sort_order integer not null,
   mileage integer not null default 0,
   fuel_cost numeric(10, 2) not null default 0,
   maintenance_cost numeric(10, 2) not null default 0,
   created_at timestamptz not null default now()
 );
+alter table public.monthly_fleet_metrics add column if not exists user_id uuid references auth.users(id) on delete cascade default auth.uid();
 
--- Enable Row Level Security
-alter table public.vehicles enable row level security;
-alter table public.maintenance_logs enable row level security;
-alter table public.monthly_fleet_metrics enable row level security;
-
--- Starter development policies (tighten once Supabase Auth is enabled)
-drop policy if exists "Allow public read vehicles" on public.vehicles;
-create policy "Allow public read vehicles"
-  on public.vehicles for select
-  using (true);
-
-drop policy if exists "Allow public insert vehicles" on public.vehicles;
-create policy "Allow public insert vehicles"
-  on public.vehicles for insert
-  with check (true);
-
-drop policy if exists "Allow public update vehicles" on public.vehicles;
-create policy "Allow public update vehicles"
-  on public.vehicles for update
-  using (true);
-
-drop policy if exists "Allow public delete vehicles" on public.vehicles;
-create policy "Allow public delete vehicles"
-  on public.vehicles for delete
-  using (true);
-
-drop policy if exists "Allow public read maintenance_logs" on public.maintenance_logs;
-create policy "Allow public read maintenance_logs"
-  on public.maintenance_logs for select
-  using (true);
-
-drop policy if exists "Allow public insert maintenance_logs" on public.maintenance_logs;
-create policy "Allow public insert maintenance_logs"
-  on public.maintenance_logs for insert
-  with check (true);
-
-drop policy if exists "Allow public read monthly_fleet_metrics" on public.monthly_fleet_metrics;
-create policy "Allow public read monthly_fleet_metrics"
-  on public.monthly_fleet_metrics for select
-  using (true);
-
--- Keep just 1 starter vehicle for now
-delete from public.maintenance_logs;
-delete from public.vehicles;
-
-insert into public.vehicles
-  (vehicle_code, name, brand, model, category, sub_type, engine_cc, plate, type, driver, status, mileage, fuel_level, last_service, next_service)
-values
-  ('VH-001', 'City Glide', 'Honda', 'Activa 6G', 'Two Wheeler', 'Scooter', 110, 'MH-12-AB-4021', 'Scooter', 'Owner', 'Active', 8450, 78, '2026-10-12', '2026-12-15')
-on conflict (vehicle_code) do update set
-  name = excluded.name,
-  brand = excluded.brand,
-  model = excluded.model,
-  category = excluded.category,
-  sub_type = excluded.sub_type,
-  engine_cc = excluded.engine_cc,
-  plate = excluded.plate,
-  type = excluded.type,
-  status = excluded.status,
-  mileage = excluded.mileage,
-  fuel_level = excluded.fuel_level;
-
--- Seed maintenance schedule for the 1 vehicle
-insert into public.maintenance_logs
-  (work_order_code, vehicle_code, vehicle_name, service_type, due_date, estimated_cost, priority, status)
-values
-  ('MNT-101', 'VH-001', 'Honda Activa 6G', 'Engine Oil Change & Brake Inspection', '2026-12-15', 45, 'Medium', 'Scheduled'),
-  ('MNT-102', 'VH-001', 'Honda Activa 6G', 'Air Filter & Tire Pressure Check', '2027-01-20', 25, 'Low', 'Scheduled')
-on conflict (work_order_code) do nothing;
-
--- Seed monthly metrics for the 1 vehicle
-delete from public.monthly_fleet_metrics;
-insert into public.monthly_fleet_metrics
-  (month_label, sort_order, mileage, fuel_cost, maintenance_cost)
-values
-  ('Jan', 1, 480, 52, 0),
-  ('Feb', 2, 510, 56, 35),
-  ('Mar', 3, 590, 64, 0),
-  ('Apr', 4, 540, 59, 20),
-  ('May', 5, 605, 66, 0),
-  ('Jun', 6, 620, 68, 45)
-on conflict (month_label) do nothing;
-
--- 4. Fuel refills table (tracks refills, spend, stations, fill type, and odometer sync)
+-- 5. Fuel Refills Table
 create table if not exists public.fuel_refills (
   id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade default auth.uid(),
   vehicle_code text not null references public.vehicles(vehicle_code) on delete cascade,
   refill_date date not null default current_date,
   odometer_km integer not null check (odometer_km >= 0),
@@ -178,24 +107,12 @@ create table if not exists public.fuel_refills (
   notes text,
   created_at timestamptz not null default now()
 );
+alter table public.fuel_refills add column if not exists user_id uuid references auth.users(id) on delete cascade default auth.uid();
 
--- Upgrade existing fuel_refills table if created earlier
-alter table public.fuel_refills add column if not exists price_per_liter numeric(10, 2);
-alter table public.fuel_refills add column if not exists fuel_fill_type text default 'Full Tank';
-alter table public.fuel_refills add column if not exists station_name text default 'Fuel Station';
-alter table public.fuel_refills add column if not exists location text;
-
-alter table public.fuel_refills drop constraint if exists fuel_refills_fill_type_check;
-alter table public.fuel_refills
-  add constraint fuel_refills_fill_type_check
-  check (fuel_fill_type in ('Full Tank', 'Partial / Reserve'));
-
-create index if not exists idx_fuel_refills_vehicle_recent
-  on public.fuel_refills (vehicle_code, refill_date desc, created_at desc);
-
--- 5. Maintenance health items table (18 wear components vs odometer)
+-- 6. Maintenance Health Items Table (18 wear components)
 create table if not exists public.maintenance_items (
   id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade default auth.uid(),
   vehicle_code text not null references public.vehicles(vehicle_code) on delete cascade,
   item_key text not null,
   label text not null,
@@ -205,13 +122,12 @@ create table if not exists public.maintenance_items (
   updated_at timestamptz not null default now(),
   constraint maintenance_items_vehicle_item_unique unique (vehicle_code, item_key)
 );
+alter table public.maintenance_items add column if not exists user_id uuid references auth.users(id) on delete cascade default auth.uid();
 
-create index if not exists idx_maintenance_items_vehicle_order
-  on public.maintenance_items (vehicle_code, sort_order asc);
-
--- 6. Component service logs (individual replacement / service logs for each component)
+-- 7. Component Service Logs
 create table if not exists public.component_service_logs (
   id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade default auth.uid(),
   vehicle_code text not null references public.vehicles(vehicle_code) on delete cascade,
   item_key text not null,
   service_date date not null default current_date,
@@ -220,13 +136,12 @@ create table if not exists public.component_service_logs (
   notes text,
   created_at timestamptz not null default now()
 );
+alter table public.component_service_logs add column if not exists user_id uuid references auth.users(id) on delete cascade default auth.uid();
 
-create index if not exists idx_component_service_logs_vehicle_item
-  on public.component_service_logs (vehicle_code, item_key, service_date desc, created_at desc);
-
--- 7. Other repairs & custom replacements table (ad-hoc jobs with cost, odo, and details)
+-- 8. Vehicle Repairs Table
 create table if not exists public.vehicle_repairs (
   id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade default auth.uid(),
   vehicle_code text not null references public.vehicles(vehicle_code) on delete cascade,
   repair_title text not null,
   category text not null default 'Repair',
@@ -237,90 +152,12 @@ create table if not exists public.vehicle_repairs (
   notes text,
   created_at timestamptz not null default now()
 );
+alter table public.vehicle_repairs add column if not exists user_id uuid references auth.users(id) on delete cascade default auth.uid();
 
-create index if not exists idx_vehicle_repairs_vehicle_date
-  on public.vehicle_repairs (vehicle_code, repair_date desc, created_at desc);
-
--- Row Level Security policies
-alter table public.fuel_refills enable row level security;
-alter table public.maintenance_items enable row level security;
-alter table public.component_service_logs enable row level security;
-alter table public.vehicle_repairs enable row level security;
-
-drop policy if exists "Allow public read fuel_refills" on public.fuel_refills;
-create policy "Allow public read fuel_refills" on public.fuel_refills for select using (true);
-
-drop policy if exists "Allow public insert fuel_refills" on public.fuel_refills;
-create policy "Allow public insert fuel_refills" on public.fuel_refills for insert with check (true);
-
-drop policy if exists "Allow public update fuel_refills" on public.fuel_refills;
-create policy "Allow public update fuel_refills" on public.fuel_refills for update using (true);
-
-drop policy if exists "Allow public delete fuel_refills" on public.fuel_refills;
-create policy "Allow public delete fuel_refills" on public.fuel_refills for delete using (true);
-
-drop policy if exists "Allow public read maintenance_items" on public.maintenance_items;
-create policy "Allow public read maintenance_items" on public.maintenance_items for select using (true);
-
-drop policy if exists "Allow public insert maintenance_items" on public.maintenance_items;
-create policy "Allow public insert maintenance_items" on public.maintenance_items for insert with check (true);
-
-drop policy if exists "Allow public update maintenance_items" on public.maintenance_items;
-create policy "Allow public update maintenance_items" on public.maintenance_items for update using (true);
-
-drop policy if exists "Allow public read component_service_logs" on public.component_service_logs;
-create policy "Allow public read component_service_logs" on public.component_service_logs for select using (true);
-
-drop policy if exists "Allow public insert component_service_logs" on public.component_service_logs;
-create policy "Allow public insert component_service_logs" on public.component_service_logs for insert with check (true);
-
-drop policy if exists "Allow public update component_service_logs" on public.component_service_logs;
-create policy "Allow public update component_service_logs" on public.component_service_logs for update using (true);
-
-drop policy if exists "Allow public delete component_service_logs" on public.component_service_logs;
-create policy "Allow public delete component_service_logs" on public.component_service_logs for delete using (true);
-
-drop policy if exists "Allow public read vehicle_repairs" on public.vehicle_repairs;
-create policy "Allow public read vehicle_repairs" on public.vehicle_repairs for select using (true);
-
-drop policy if exists "Allow public insert vehicle_repairs" on public.vehicle_repairs;
-create policy "Allow public insert vehicle_repairs" on public.vehicle_repairs for insert with check (true);
-
-drop policy if exists "Allow public update vehicle_repairs" on public.vehicle_repairs;
-create policy "Allow public update vehicle_repairs" on public.vehicle_repairs for update using (true);
-
-drop policy if exists "Allow public delete vehicle_repairs" on public.vehicle_repairs;
-create policy "Allow public delete vehicle_repairs" on public.vehicle_repairs for delete using (true);
-
--- Seed/sync 18 comprehensive maintenance components
-insert into public.maintenance_items (vehicle_code, item_key, label, interval_km, last_service_odo, sort_order)
-values
-  ('VH-001', 'engine_oil', 'Engine Oil', 3000, 0, 1),
-  ('VH-001', 'chain_lube', 'Chain Lube', 500, 0, 2),
-  ('VH-001', 'air_filter', 'Air Filter', 6000, 0, 3),
-  ('VH-001', 'front_tyre', 'Front Tyre Health', 20000, 0, 4),
-  ('VH-001', 'rear_tyre', 'Rear Tyre Health', 15000, 0, 5),
-  ('VH-001', 'battery', 'Battery Health', 25000, 0, 6),
-  ('VH-001', 'brake_front', 'Brake Pads Front', 10000, 0, 7),
-  ('VH-001', 'brake_rear', 'Brake Pads Rear', 10000, 0, 8),
-  ('VH-001', 'clutch_plate', 'Clutch Plate', 25000, 0, 9),
-  ('VH-001', 'spark_plug', 'Spark Plug', 12000, 0, 10),
-  ('VH-001', 'coolant', 'Coolant', 15000, 0, 11),
-  ('VH-001', 'chain_replacement', 'Chain Replacement', 20000, 0, 12),
-  ('VH-001', 'sprocket_replacement', 'Sprocket Replacement', 20000, 0, 13),
-  ('VH-001', 'brake_fluid_front', 'Brake Fluid Front', 15000, 0, 14),
-  ('VH-001', 'brake_fluid_rear', 'Brake Fluid Rear', 15000, 0, 15),
-  ('VH-001', 'fork_oil_front', 'Front Fork Oil Replace', 15000, 0, 16),
-  ('VH-001', 'rear_suspension', 'Rear Suspension Replace', 30000, 0, 17),
-  ('VH-001', 'washing', 'Washing & Detailing', 500, 0, 18)
-on conflict (vehicle_code, item_key) do update set
-  label = excluded.label,
-  interval_km = excluded.interval_km,
-  sort_order = excluded.sort_order;
-
--- 8. Vehicle documents table (Insurance, RC, PUC, Warranty expiry tracking)
+-- 9. Vehicle Documents Table
 create table if not exists public.vehicle_documents (
   id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade default auth.uid(),
   vehicle_code text not null references public.vehicles(vehicle_code) on delete cascade,
   doc_type text not null,
   title text not null,
@@ -335,13 +172,12 @@ create table if not exists public.vehicle_documents (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+alter table public.vehicle_documents add column if not exists user_id uuid references auth.users(id) on delete cascade default auth.uid();
 
-create index if not exists idx_vehicle_documents_vehicle_expiry 
-  on public.vehicle_documents (vehicle_code, expiry_date asc);
-
--- 9. Service reminders table (user-entered free & paid inspection intervals & completion logs)
+-- 10. Service Reminders Table
 create table if not exists public.service_reminders (
   id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade default auth.uid(),
   vehicle_code text not null references public.vehicles(vehicle_code) on delete cascade,
   title text not null,
   service_type text not null default 'Free Service',
@@ -362,13 +198,12 @@ create table if not exists public.service_reminders (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+alter table public.service_reminders add column if not exists user_id uuid references auth.users(id) on delete cascade default auth.uid();
 
-create index if not exists idx_service_reminders_vehicle_status 
-  on public.service_reminders (vehicle_code, status, due_date asc);
-
--- 10. Vehicle modifications & accessories table
+-- 11. Vehicle Modifications Table
 create table if not exists public.vehicle_modifications (
   id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade default auth.uid(),
   vehicle_code text not null references public.vehicles(vehicle_code) on delete cascade,
   title text not null,
   category text not null default 'Accessory',
@@ -382,28 +217,124 @@ create table if not exists public.vehicle_modifications (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+alter table public.vehicle_modifications add column if not exists user_id uuid references auth.users(id) on delete cascade default auth.uid();
 
-create index if not exists idx_vehicle_modifications_vehicle_date 
-  on public.vehicle_modifications (vehicle_code, installed_date desc, created_at desc);
-
+-- Enable Row Level Security on ALL tables
+alter table public.profiles enable row level security;
+alter table public.vehicles enable row level security;
+alter table public.maintenance_logs enable row level security;
+alter table public.monthly_fleet_metrics enable row level security;
+alter table public.fuel_refills enable row level security;
+alter table public.maintenance_items enable row level security;
+alter table public.component_service_logs enable row level security;
+alter table public.vehicle_repairs enable row level security;
+alter table public.vehicle_documents enable row level security;
+alter table public.service_reminders enable row level security;
 alter table public.vehicle_modifications enable row level security;
 
-drop policy if exists "Allow public read vehicle_modifications" on public.vehicle_modifications;
-create policy "Allow public read vehicle_modifications" on public.vehicle_modifications for select using (true);
+-- Row Level Security Policies
+-- Profiles:
+drop policy if exists "Users can view own profile" on public.profiles;
+create policy "Users can view own profile" on public.profiles for select to authenticated using ((select auth.uid()) = id);
+drop policy if exists "Users can update own profile" on public.profiles;
+create policy "Users can update own profile" on public.profiles for update to authenticated using ((select auth.uid()) = id) with check ((select auth.uid()) = id);
+drop policy if exists "Users can insert own profile" on public.profiles;
+create policy "Users can insert own profile" on public.profiles for insert to authenticated with check ((select auth.uid()) = id);
 
-drop policy if exists "Allow public insert vehicle_modifications" on public.vehicle_modifications;
-create policy "Allow public insert vehicle_modifications" on public.vehicle_modifications for insert with check (true);
+-- Vehicles:
+drop policy if exists "User vehicles select" on public.vehicles;
+create policy "User vehicles select" on public.vehicles for select to authenticated using ((select auth.uid()) = user_id);
+drop policy if exists "User vehicles insert" on public.vehicles;
+create policy "User vehicles insert" on public.vehicles for insert to authenticated with check ((select auth.uid()) = user_id);
+drop policy if exists "User vehicles update" on public.vehicles for update to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+drop policy if exists "User vehicles delete" on public.vehicles for delete to authenticated using ((select auth.uid()) = user_id);
 
-drop policy if exists "Allow public update vehicle_modifications" on public.vehicle_modifications;
-create policy "Allow public update vehicle_modifications" on public.vehicle_modifications for update using (true);
+-- Fuel Refills:
+drop policy if exists "User fuel select" on public.fuel_refills;
+create policy "User fuel select" on public.fuel_refills for select to authenticated using ((select auth.uid()) = user_id);
+drop policy if exists "User fuel insert" on public.fuel_refills;
+create policy "User fuel insert" on public.fuel_refills for insert to authenticated with check ((select auth.uid()) = user_id);
+drop policy if exists "User fuel update" on public.fuel_refills for update to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+drop policy if exists "User fuel delete" on public.fuel_refills for delete to authenticated using ((select auth.uid()) = user_id);
 
-drop policy if exists "Allow public delete vehicle_modifications" on public.vehicle_modifications;
-create policy "Allow public delete vehicle_modifications" on public.vehicle_modifications for delete using (true);
+-- Maintenance Items:
+drop policy if exists "User maintenance items select" on public.maintenance_items;
+create policy "User maintenance items select" on public.maintenance_items for select to authenticated using ((select auth.uid()) = user_id);
+drop policy if exists "User maintenance items insert" on public.maintenance_items;
+create policy "User maintenance items insert" on public.maintenance_items for insert to authenticated with check ((select auth.uid()) = user_id);
+drop policy if exists "User maintenance items update" on public.maintenance_items;
+create policy "User maintenance items update" on public.maintenance_items for update to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
 
--- Permissions for vehicle_documents, service_reminders, and vehicle_modifications
-grant all on public.vehicle_documents to anon, authenticated, service_role;
-grant all on public.service_reminders to anon, authenticated, service_role;
-grant all on public.vehicle_modifications to anon, authenticated, service_role;
+-- Component Service Logs:
+drop policy if exists "User service logs select" on public.component_service_logs;
+create policy "User service logs select" on public.component_service_logs for select to authenticated using ((select auth.uid()) = user_id);
+drop policy if exists "User service logs insert" on public.component_service_logs;
+create policy "User service logs insert" on public.component_service_logs for insert to authenticated with check ((select auth.uid()) = user_id);
+drop policy if exists "User service logs update" on public.component_service_logs;
+create policy "User service logs update" on public.component_service_logs for update to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+drop policy if exists "User service logs delete" on public.component_service_logs;
+create policy "User service logs delete" on public.component_service_logs for delete to authenticated using ((select auth.uid()) = user_id);
 
--- Refresh PostgREST schema cache so new columns and tables are available immediately
+-- Vehicle Repairs:
+drop policy if exists "User repairs select" on public.vehicle_repairs;
+create policy "User repairs select" on public.vehicle_repairs for select to authenticated using ((select auth.uid()) = user_id);
+drop policy if exists "User repairs insert" on public.vehicle_repairs;
+create policy "User repairs insert" on public.vehicle_repairs for insert to authenticated with check ((select auth.uid()) = user_id);
+drop policy if exists "User repairs update" on public.vehicle_repairs;
+create policy "User repairs update" on public.vehicle_repairs for update to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+drop policy if exists "User repairs delete" on public.vehicle_repairs;
+create policy "User repairs delete" on public.vehicle_repairs for delete to authenticated using ((select auth.uid()) = user_id);
+
+-- Vehicle Documents:
+drop policy if exists "User documents select" on public.vehicle_documents;
+create policy "User documents select" on public.vehicle_documents for select to authenticated using ((select auth.uid()) = user_id);
+drop policy if exists "User documents insert" on public.vehicle_documents;
+create policy "User documents insert" on public.vehicle_documents for insert to authenticated with check ((select auth.uid()) = user_id);
+drop policy if exists "User documents update" on public.vehicle_documents;
+create policy "User documents update" on public.vehicle_documents for update to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+drop policy if exists "User documents delete" on public.vehicle_documents;
+create policy "User documents delete" on public.vehicle_documents for delete to authenticated using ((select auth.uid()) = user_id);
+
+-- Service Reminders:
+drop policy if exists "User reminders select" on public.service_reminders;
+create policy "User reminders select" on public.service_reminders for select to authenticated using ((select auth.uid()) = user_id);
+drop policy if exists "User reminders insert" on public.service_reminders;
+create policy "User reminders insert" on public.service_reminders for insert to authenticated with check ((select auth.uid()) = user_id);
+drop policy if exists "User reminders update" on public.service_reminders;
+create policy "User reminders update" on public.service_reminders for update to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+drop policy if exists "User reminders delete" on public.service_reminders;
+create policy "User reminders delete" on public.service_reminders for delete to authenticated using ((select auth.uid()) = user_id);
+
+-- Vehicle Modifications:
+drop policy if exists "User modifications select" on public.vehicle_modifications;
+create policy "User modifications select" on public.vehicle_modifications for select to authenticated using ((select auth.uid()) = user_id);
+drop policy if exists "User modifications insert" on public.vehicle_modifications;
+create policy "User modifications insert" on public.vehicle_modifications for insert to authenticated with check ((select auth.uid()) = user_id);
+drop policy if exists "User modifications update" on public.vehicle_modifications;
+create policy "User modifications update" on public.vehicle_modifications for update to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+drop policy if exists "User modifications delete" on public.vehicle_modifications;
+create policy "User modifications delete" on public.vehicle_modifications for delete to authenticated using ((select auth.uid()) = user_id);
+
+-- Indexes for lightning fast user-isolated queries:
+create index if not exists idx_vehicles_user_id on public.vehicles (user_id);
+create index if not exists idx_fuel_refills_user_id on public.fuel_refills (user_id);
+create index if not exists idx_maintenance_items_user_id on public.maintenance_items (user_id);
+create index if not exists idx_component_service_logs_user_id on public.component_service_logs (user_id);
+create index if not exists idx_vehicle_repairs_user_id on public.vehicle_repairs (user_id);
+create index if not exists idx_vehicle_documents_user_id on public.vehicle_documents (user_id);
+create index if not exists idx_service_reminders_user_id on public.service_reminders (user_id);
+create index if not exists idx_vehicle_modifications_user_id on public.vehicle_modifications (user_id);
+
+-- Permissions for authenticated users:
+grant all on public.profiles to authenticated, service_role;
+grant all on public.vehicles to authenticated, service_role;
+grant all on public.fuel_refills to authenticated, service_role;
+grant all on public.maintenance_items to authenticated, service_role;
+grant all on public.component_service_logs to authenticated, service_role;
+grant all on public.vehicle_repairs to authenticated, service_role;
+grant all on public.vehicle_documents to authenticated, service_role;
+grant all on public.service_reminders to authenticated, service_role;
+grant all on public.vehicle_modifications to authenticated, service_role;
+
+-- Reload schema cache
 notify pgrst, 'reload schema';

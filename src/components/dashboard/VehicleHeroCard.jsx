@@ -14,7 +14,9 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAnimatedNumber } from '../../hooks/useAnimatedNumber'
 import { computeLatestFuelMileage } from '../../services/fleetService'
+import { formatDisplayDate } from '../../utils/dateFormatter'
 import {
+  FOUR_WHEELER_SUBTYPES,
   TWO_WHEELER_SUBTYPES,
   VEHICLE_CATEGORIES,
   resolveVehicleVisual,
@@ -101,14 +103,14 @@ export default function VehicleHeroCard({
     setFormData((prev) => ({
       ...prev,
       category: nextCategory,
-      subType: nextCategory === 'Four Wheeler' ? 'Car' : 'Scooter',
+      subType: nextCategory === 'Four Wheeler' ? 'Sedan' : 'Bike',
       engineCc:
         nextCategory === 'Four Wheeler'
           ? prev.engineCc < 600
-            ? 998
+            ? 1498
             : prev.engineCc
           : prev.engineCc > 600
-            ? 110
+            ? 155
             : prev.engineCc,
     }))
   }
@@ -236,7 +238,7 @@ export default function VehicleHeroCard({
                   {vehicle.purchaseDate && (
                     <span className="inline-flex items-center gap-1.5 rounded-full border border-lime-400/25 bg-lime-400/10 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-lime-300 shadow-[0_0_12px_rgba(163,230,53,0.12)]">
                       <Calendar className="h-3 w-3 text-lime-400" />
-                      Purchased: {vehicle.purchaseDate}
+                      Purchased: {formatDisplayDate(vehicle.purchaseDate)}
                     </span>
                   )}
 
@@ -357,7 +359,7 @@ export default function VehicleHeroCard({
                     </span>
                     {vehicle.purchaseDate && (
                       <span className="text-[10px] font-medium text-zinc-400">
-                        • {vehicle.purchaseDate}
+                        • {formatDisplayDate(vehicle.purchaseDate)}
                       </span>
                     )}
                   </div>
@@ -408,7 +410,7 @@ export default function VehicleHeroCard({
                     onChange={(e) =>
                       setFormData({ ...formData, model: e.target.value })
                     }
-                    placeholder="NS400z"
+                    placeholder="Enter model"
                     className="mt-1 w-full rounded-lg border border-white/10 bg-[#151a20] px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-lime-400 focus:outline-none"
                   />
                 </div>
@@ -423,7 +425,7 @@ export default function VehicleHeroCard({
                     onChange={(e) =>
                       setFormData({ ...formData, brand: e.target.value })
                     }
-                    placeholder="Bajaj Auto"
+                    placeholder="Enter brand"
                     className="mt-1 w-full rounded-lg border border-white/10 bg-[#151a20] px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-lime-400 focus:outline-none"
                   />
                 </div>
@@ -438,7 +440,7 @@ export default function VehicleHeroCard({
                     onChange={(e) =>
                       setFormData({ ...formData, name: e.target.value })
                     }
-                    placeholder="Pulsar"
+                    placeholder="Enter vehicle name"
                     className="mt-1 w-full rounded-lg border border-white/10 bg-[#151a20] px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-lime-400 focus:outline-none"
                   />
                 </div>
@@ -462,35 +464,27 @@ export default function VehicleHeroCard({
                   </select>
                 </div>
 
-                {formData.category === 'Two Wheeler' ? (
-                  <div>
-                    <label className="block text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
-                      Style
-                    </label>
-                    <select
-                      value={formData.subType}
-                      onChange={(e) =>
-                        setFormData({ ...formData, subType: e.target.value })
-                      }
-                      className="mt-1 w-full rounded-lg border border-white/10 bg-[#151a20] px-3 py-2 text-sm text-white focus:border-lime-400 focus:outline-none"
-                    >
-                      {TWO_WHEELER_SUBTYPES.map((st) => (
-                        <option key={st} value={st}>
-                          {st}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                ) : (
-                  <div>
-                    <label className="block text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
-                      Auto Visual
-                    </label>
-                    <div className="mt-1 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm font-semibold text-lime-300">
-                      {visual.label}
-                    </div>
-                  </div>
-                )}
+                <div>
+                  <label className="block text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+                    {formData.category === 'Two Wheeler' ? 'Style' : 'Car Type'}
+                  </label>
+                  <select
+                    value={formData.subType}
+                    onChange={(e) =>
+                      setFormData({ ...formData, subType: e.target.value })
+                    }
+                    className="mt-1 w-full rounded-lg border border-white/10 bg-[#151a20] px-3 py-2 text-sm text-white focus:border-lime-400 focus:outline-none"
+                  >
+                    {(formData.category === 'Two Wheeler'
+                      ? TWO_WHEELER_SUBTYPES
+                      : FOUR_WHEELER_SUBTYPES
+                    ).map((st) => (
+                      <option key={st} value={st}>
+                        {st}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
                 <div>
                   <label className="block text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
@@ -558,7 +552,7 @@ export default function VehicleHeroCard({
                     onChange={(e) =>
                       setFormData({ ...formData, plate: e.target.value })
                     }
-                    placeholder="e.g. JK-01-BG-1152"
+                    placeholder="Enter plate number"
                     className="mt-1 w-full rounded-lg border border-white/10 bg-[#151a20] px-3 py-2 font-mono text-sm uppercase text-white focus:border-lime-400 focus:outline-none"
                   />
                 </div>
@@ -632,7 +626,7 @@ export default function VehicleHeroCard({
                         e.target.value === '' ? '' : Number(e.target.value)
                       setFormData({ ...formData, exShowroomPrice: val })
                     }}
-                    placeholder="e.g. 185000"
+                    placeholder="Enter ex-showroom price"
                     className="mt-1 w-full rounded-lg border border-lime-400/30 bg-[#151a20] px-3 py-2 font-mono text-sm font-bold text-lime-300 placeholder-zinc-500 focus:border-lime-400 focus:outline-none"
                   />
                   <p className="mt-0.5 text-[9px] text-zinc-500">

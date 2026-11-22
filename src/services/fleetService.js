@@ -47,33 +47,32 @@ function mapVehicleRow(row) {
     row.category === 'Four Wheeler' ? 'Four Wheeler' : 'Two Wheeler'
   const subType =
     category === 'Four Wheeler'
-      ? 'Car'
-      : row.sub_type === 'Bike'
-        ? 'Bike'
-        : 'Scooter'
+      ? row.sub_type || 'Sedan'
+      : row.sub_type || 'Bike'
 
   return {
     id: row.vehicle_code || row.id,
     dbId: row.id,
+    userId: row.user_id || null,
     name: row.name || defaultVehicle.name,
-    brand: row.brand || defaultVehicle.brand,
-    model: row.model || row.name || defaultVehicle.model,
+    brand: row.brand || 'None',
+    model: row.model || row.name || 'None',
     category,
     subType,
-    engineCc: Number(row.engine_cc) || defaultVehicle.engineCc,
-    plate: row.plate || defaultVehicle.plate,
+    engineCc: Number(row.engine_cc) || 0,
+    plate: row.plate || 'None',
     type: subType,
-    driver: row.driver || 'Owner',
+    driver: row.driver || 'None',
     status: row.status || 'Active',
-    fuelType: row.fuel_type || defaultVehicle.fuelType || 'Petrol (E10)',
+    fuelType: row.fuel_type || 'None',
     mileage: Number(row.mileage) || 0,
-    topSpeed: Number(row.top_speed) || defaultVehicle.topSpeed || 0,
-    speed: Number(row.top_speed) || defaultVehicle.topSpeed || 0,
-    purchaseDate: row.purchase_date || defaultVehicle.purchaseDate || '2024-01-15',
+    topSpeed: Number(row.top_speed) || 0,
+    speed: Number(row.top_speed) || 0,
+    purchaseDate: row.purchase_date || 'DD-MM-YYYY',
     exShowroomPrice: Math.max(0, Number(row.ex_showroom_price) || 0),
     fuelLevel: Number(row.fuel_level) || 0,
-    lastService: row.last_service || '—',
-    nextService: row.next_service || '—',
+    lastService: row.last_service || 'None',
+    nextService: row.next_service || 'None',
   }
 }
 
@@ -503,7 +502,28 @@ export async function testSupabaseConnection() {
   }
 }
 
-export async function fetchFleetData() {
+async function getEffectiveUserId(vehicle = null) {
+  if (vehicle?.userId) return vehicle.userId
+  if (!isSupabaseConfigured || !supabase) return null
+  try {
+    const { data } = await supabase.auth.getUser()
+    return data?.user?.id || null
+  } catch {
+    return null
+  }
+}
+
+export async function fetchFleetData(activeUser = null, targetVehicleCode = null) {
+  const storedCode =
+    typeof window !== 'undefined'
+      ? localStorage.getItem('mkd_active_vehicle_code')
+      : null
+  const effectiveFallbackCode = targetVehicleCode || storedCode
+  const fallbackPrimary =
+    mockVehicles.find((v) => v.id === effectiveFallbackCode) ||
+    mockVehicles[0] ||
+    defaultVehicle
+
   const fallbackPayload = {
     source: 'mock',
     needsSchema: false,
@@ -532,10 +552,27 @@ export async function fetchFleetData() {
     monthlyFuelSummary: computeMonthlyFuelSummary(defaultFuelRefills),
     statusData: mockStatusData,
     categoryData: mockCategoryData,
+    primaryVehicle: fallbackPrimary,
     error: null,
   }
 
   if (!isSupabaseConfigured || !supabase) {
+    return fallbackPayload
+  }
+
+  // Check active user
+  let user = activeUser
+  if (!user) {
+    try {
+      const { data } = await supabase.auth.getUser()
+      user = data?.user || null
+    } catch {
+      user = null
+    }
+  }
+
+  // If no authenticated user, return guest demo fallback cleanly
+  if (!user) {
     return fallbackPayload
   }
 
@@ -555,7 +592,7 @@ export async function fetchFleetData() {
       supabase
         .from('vehicles')
         .select(
-          'id, vehicle_code, name, brand, model, category, sub_type, engine_cc, top_speed, fuel_type, purchase_date, ex_showroom_price, plate, driver, status, mileage, fuel_level, last_service, next_service',
+          'id, user_id, vehicle_code, name, brand, model, category, sub_type, engine_cc, top_speed, fuel_type, purchase_date, ex_showroom_price, plate, driver, status, mileage, fuel_level, last_service, next_service',
         )
         .order('created_at', { ascending: true })
         .limit(1),
@@ -630,9 +667,68 @@ export async function fetchFleetData() {
       }
     }
 
-    const mappedVehicles = (vehiclesRes.data || []).map(mapVehicleRow)
-    const primaryVehicle = mappedVehicles[0] || defaultVehicle
+    let vehicleRows = vehiclesRes.data || []
+
+    if (vehicleRows.length === 0 && user && !vehiclesRes.error) {
+      const newVehicleCode = `VH-${user.id.slice(0, 6).toUpperCase()}`
+      const starterVehicle = {
+        user_id: user.id,
+        vehicle_code: newVehicleCode,
+        name: user.user_metadata?.vehicle_name || 'Enter Vehicle Name',
+        brand: user.user_metadata?.vehicle_brand || 'None',
+        model: user.user_metadata?.vehicle_model || 'None',
+        category: 'Two Wheeler',
+        sub_type: 'Bike',
+        engine_cc: 0,
+        top_speed: 0,
+        fuel_type: 'None',
+        plate: user.user_metadata?.vehicle_plate || 'None',
+        driver:
+          user.user_metadata?.full_name ||
+          'None',
+        status: 'Active',
+        mileage: 0,
+        fuel_level: 0,
+        purchase_date: null,
+      }
+
+      const { data: createdVehicle } = await supabase
+        .from('vehicles')
+        .insert([starterVehicle])
+        .select('*')
+        .single()
+
+      if (createdVehicle) {
+        vehicleRows = [createdVehicle]
+
+        const starterItems = defaultMaintenanceItems.map((item, idx) => ({
+          user_id: user.id,
+          vehicle_code: newVehicleCode,
+          item_key: item.itemKey || item.key,
+          label: item.label,
+          interval_km: item.intervalKm || 1000,
+          last_service_odo: 0,
+          sort_order: idx + 1,
+        }))
+        await supabase.from('maintenance_items').insert(starterItems)
+      }
+    }
+
+    const mappedVehicles = vehicleRows.map(mapVehicleRow)
+    const effectiveTargetCode = targetVehicleCode || storedCode
+    const primaryVehicle =
+      mappedVehicles.find((v) => v.id === effectiveTargetCode) ||
+      mappedVehicles[0] ||
+      defaultVehicle
     const primaryCode = primaryVehicle.id
+
+    if (typeof window !== 'undefined' && primaryVehicle.id) {
+      try {
+        localStorage.setItem('mkd_active_vehicle_code', primaryVehicle.id)
+      } catch {
+        // ignore storage errors
+      }
+    }
 
     const fuelRefills = !refillsRes.error
       ? (refillsRes.data || [])
@@ -646,7 +742,7 @@ export async function fetchFleetData() {
       primaryVehicle.fuelLevel = fuelRefills[0].fuelLevelAfter
     }
 
-    const vehicles = [primaryVehicle]
+    const vehicles = mappedVehicles
 
     const allMaintenance = (maintenanceRes.data || []).map(mapMaintenanceRow)
     const maintenance = allMaintenance.filter(
@@ -743,20 +839,18 @@ export async function updatePrimaryVehicleRecord(currentVehicle, updates) {
     updates.category === 'Four Wheeler' ? 'Four Wheeler' : 'Two Wheeler'
   const subType =
     category === 'Four Wheeler'
-      ? 'Car'
-      : updates.subType === 'Bike'
-        ? 'Bike'
-        : 'Scooter'
+      ? updates.subType || 'Sedan'
+      : updates.subType || 'Bike'
 
   const mergedVehicle = {
     ...currentVehicle,
-    name: updates.name.trim() || currentVehicle.name,
-    brand: updates.brand.trim() || currentVehicle.brand,
-    model: updates.model.trim() || currentVehicle.model,
+    name: updates.name ? updates.name.trim() : currentVehicle.name,
+    brand: updates.brand ? updates.brand.trim() : currentVehicle.brand,
+    model: updates.model ? updates.model.trim() : currentVehicle.model,
     category,
     subType,
     type: subType,
-    engineCc: Math.max(50, Number(updates.engineCc) || 110),
+    engineCc: Math.max(0, Number(updates.engineCc) || 0),
     topSpeed: Math.max(
       0,
       Math.round(
@@ -769,7 +863,8 @@ export async function updatePrimaryVehicleRecord(currentVehicle, updates) {
         Number(updates.topSpeed ?? updates.speed ?? currentVehicle.topSpeed) || 0,
       ),
     ),
-    plate: updates.plate.trim().toUpperCase() || currentVehicle.plate,
+    plate: updates.plate ? updates.plate.trim().toUpperCase() : currentVehicle.plate,
+    driver: updates.driver ? updates.driver.trim() : (currentVehicle.driver || 'None'),
     purchaseDate:
       updates.purchaseDate !== undefined && updates.purchaseDate !== ''
         ? updates.purchaseDate
@@ -779,7 +874,7 @@ export async function updatePrimaryVehicleRecord(currentVehicle, updates) {
         ? Math.max(0, Number(updates.exShowroomPrice) || 0)
         : currentVehicle.exShowroomPrice || 0,
     status: updates.status || currentVehicle.status,
-    fuelType: updates.fuelType || currentVehicle.fuelType || 'Petrol (E10)',
+    fuelType: updates.fuelType || currentVehicle.fuelType || 'None',
     mileage:
       updates.mileage !== undefined && updates.mileage !== ''
         ? Math.max(0, Number(updates.mileage) || 0)
@@ -805,6 +900,7 @@ export async function updatePrimaryVehicleRecord(currentVehicle, updates) {
       engine_cc: mergedVehicle.engineCc,
       top_speed: mergedVehicle.topSpeed,
       plate: mergedVehicle.plate,
+      driver: mergedVehicle.driver,
       type: mergedVehicle.subType,
       status: mergedVehicle.status,
       fuel_type: mergedVehicle.fuelType,
@@ -824,6 +920,130 @@ export async function updatePrimaryVehicleRecord(currentVehicle, updates) {
   }
 
   return { vehicle: mapVehicleRow(data), savedToSupabase: true }
+}
+
+export async function createVehicleRecord(user, vehicleInput) {
+  const category =
+    vehicleInput.category === 'Four Wheeler' ? 'Four Wheeler' : 'Two Wheeler'
+  const subType =
+    category === 'Four Wheeler'
+      ? vehicleInput.subType || 'Sedan'
+      : vehicleInput.subType || 'Bike'
+
+  const mockCode = `VH-${Date.now().toString(36).toUpperCase()}`
+
+  if (!isSupabaseConfigured || !supabase || !user?.id) {
+    const newVehicle = {
+      ...defaultVehicle,
+      id: mockCode,
+      dbId: mockCode,
+      userId: user?.id || null,
+      name: vehicleInput.name?.trim() || 'Enter Vehicle Name',
+      brand: vehicleInput.brand?.trim() || 'None',
+      model: vehicleInput.model?.trim() || 'None',
+      category,
+      subType,
+      type: subType,
+      engineCc: Math.max(0, Number(vehicleInput.engineCc) || 0),
+      topSpeed: Math.max(0, Number(vehicleInput.topSpeed) || 0),
+      speed: Math.max(0, Number(vehicleInput.topSpeed) || 0),
+      fuelType: vehicleInput.fuelType?.trim() || 'None',
+      plate: vehicleInput.plate?.trim()?.toUpperCase() || 'None',
+      driver: vehicleInput.driver?.trim() || 'None',
+      status: vehicleInput.status || 'Active',
+      mileage: Math.max(0, Number(vehicleInput.mileage) || 0),
+      fuelLevel: Math.max(0, Number(vehicleInput.fuelLevel) || 0),
+      purchaseDate:
+        vehicleInput.purchaseDate && vehicleInput.purchaseDate !== 'DD-MM-YYYY'
+          ? vehicleInput.purchaseDate
+          : 'DD-MM-YYYY',
+      exShowroomPrice: Math.max(0, Number(vehicleInput.exShowroomPrice) || 0),
+      lastService: 'None',
+      nextService: 'None',
+    }
+    return {
+      vehicle: newVehicle,
+      maintenanceItems: defaultMaintenanceItems,
+      savedToSupabase: false,
+    }
+  }
+
+  const newVehicleCode = `VH-${user.id.slice(0, 4).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`
+  const payload = {
+    user_id: user.id,
+    vehicle_code: newVehicleCode,
+    name: vehicleInput.name?.trim() || 'Enter Vehicle Name',
+    brand: vehicleInput.brand?.trim() || 'None',
+    model: vehicleInput.model?.trim() || 'None',
+    category,
+    sub_type: subType,
+    engine_cc: Math.max(0, Number(vehicleInput.engineCc) || 0),
+    top_speed: Math.max(0, Number(vehicleInput.topSpeed) || 0),
+    fuel_type: vehicleInput.fuelType?.trim() || 'None',
+    plate: vehicleInput.plate?.trim()?.toUpperCase() || 'None',
+    driver: vehicleInput.driver?.trim() || 'None',
+    status: vehicleInput.status || 'Active',
+    mileage: Math.max(0, Number(vehicleInput.mileage) || 0),
+    fuel_level: Math.max(0, Number(vehicleInput.fuelLevel) || 0),
+    purchase_date:
+      vehicleInput.purchaseDate && vehicleInput.purchaseDate !== 'DD-MM-YYYY'
+        ? vehicleInput.purchaseDate
+        : null,
+    ex_showroom_price: Math.max(0, Number(vehicleInput.exShowroomPrice) || 0),
+  }
+
+  const { data: createdVehicle, error } = await supabase
+    .from('vehicles')
+    .insert([payload])
+    .select('*')
+    .single()
+
+  if (error) {
+    throw new Error(error.message || 'Could not register new vehicle profile in Supabase.')
+  }
+
+  // Provision 18 default maintenance items for the new vehicle profile
+  const starterItems = defaultMaintenanceItems.map((item, idx) => ({
+    user_id: user.id,
+    vehicle_code: newVehicleCode,
+    item_key: item.itemKey || item.key,
+    label: item.label,
+    interval_km: item.intervalKm || 1000,
+    last_service_odo: 0,
+    sort_order: idx + 1,
+  }))
+
+  const { data: createdItems } = await supabase
+    .from('maintenance_items')
+    .insert(starterItems)
+    .select('*')
+
+  const mappedNewVehicle = mapVehicleRow(createdVehicle)
+  const mappedItems = (createdItems || []).map(mapMaintenanceItemRow)
+
+  return {
+    vehicle: mappedNewVehicle,
+    maintenanceItems:
+      mappedItems.length > 0 ? mappedItems : defaultMaintenanceItems,
+    savedToSupabase: true,
+  }
+}
+
+export async function deleteVehicleRecord(vehicle) {
+  if (!isSupabaseConfigured || !supabase || !vehicle) {
+    return { success: true }
+  }
+
+  const { error } = await supabase
+    .from('vehicles')
+    .delete()
+    .eq('vehicle_code', vehicle.id)
+
+  if (error) {
+    throw new Error(error.message || 'Could not delete vehicle profile from Supabase.')
+  }
+
+  return { success: true }
 }
 
 function normalizeRefillPayload(refillInput) {
@@ -899,10 +1119,13 @@ export async function createFuelRefillRecord(currentVehicle, refillInput) {
     }
   }
 
+  const activeUserId = await getEffectiveUserId(currentVehicle)
+
   const { data: refillRow, error: refillError } = await supabase
     .from('fuel_refills')
     .insert([
       {
+        ...(activeUserId ? { user_id: activeUserId } : {}),
         vehicle_code: currentVehicle.id,
         refill_date: payload.refillDate,
         odometer_km: payload.odometerKm,
@@ -1163,9 +1386,11 @@ export async function createComponentServiceLogRecord(
   }
 
   try {
+    const activeUserId = await getEffectiveUserId(primaryVehicle)
     const { data: logData, error: logError } = await supabase
       .from('component_service_logs')
       .insert({
+        ...(activeUserId ? { user_id: activeUserId } : {}),
         vehicle_code: primaryVehicle.id || 'VH-001',
         item_key: item.itemKey,
         service_date: serviceDate,
@@ -1273,9 +1498,11 @@ export async function createVehicleRepairRecord(primaryVehicle, repairInput) {
   }
 
   try {
+    const activeUserId = await getEffectiveUserId(primaryVehicle)
     const { data, error } = await supabase
       .from('vehicle_repairs')
       .insert({
+        ...(activeUserId ? { user_id: activeUserId } : {}),
         vehicle_code: primaryVehicle.id || 'VH-001',
         repair_title: repairTitle,
         category,
@@ -1349,6 +1576,8 @@ export async function upsertVehicleDocumentRecord(primaryVehicle, docInput) {
       docInput.id &&
       !String(docInput.id).startsWith('DOC-')
 
+    const activeUserId = await getEffectiveUserId(primaryVehicle)
+
     if (isExisting) {
       const { data, error } = await supabase
         .from('vehicle_documents')
@@ -1378,6 +1607,7 @@ export async function upsertVehicleDocumentRecord(primaryVehicle, docInput) {
       const { data, error } = await supabase
         .from('vehicle_documents')
         .insert({
+          ...(activeUserId ? { user_id: activeUserId } : {}),
           vehicle_code: primaryVehicle.id || 'VH-001',
           doc_type: localDoc.docType,
           title: localDoc.title,
@@ -1462,9 +1692,11 @@ export async function createServiceReminderRecord(
   }
 
   try {
+    const activeUserId = await getEffectiveUserId(primaryVehicle)
     const { data, error } = await supabase
       .from('service_reminders')
       .insert({
+        ...(activeUserId ? { user_id: activeUserId } : {}),
         vehicle_code: primaryVehicle.id || 'VH-001',
         title: localReminder.title,
         service_type: localReminder.serviceType,
@@ -1774,9 +2006,11 @@ export async function createVehicleModificationRecord(
   }
 
   try {
+    const activeUserId = await getEffectiveUserId(primaryVehicle)
     const { data, error } = await supabase
       .from('vehicle_modifications')
       .insert({
+        ...(activeUserId ? { user_id: activeUserId } : {}),
         vehicle_code: primaryVehicle.id || 'VH-001',
         title: localMod.title,
         category: localMod.category,

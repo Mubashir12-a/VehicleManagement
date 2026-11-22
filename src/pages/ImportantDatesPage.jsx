@@ -26,6 +26,7 @@ import EditDocumentModal from '../components/dates/EditDocumentModal'
 import EditReminderModal from '../components/dates/EditReminderModal'
 import ServiceReminderCard from '../components/dates/ServiceReminderCard'
 import { useFleetData } from '../hooks/useFleetData'
+import { formatDisplayDate } from '../utils/dateFormatter'
 
 export default function ImportantDatesPage() {
   const {
@@ -575,7 +576,7 @@ export default function ImportantDatesPage() {
                           </span>
                         </td>
                         <td className="px-4 py-3 font-mono text-zinc-300">
-                          {service.completedDate || '—'}
+                          {formatDisplayDate(service.completedDate)}
                         </td>
                         <td className="px-4 py-3 font-mono font-bold text-white">
                           {service.completedOdometerKm

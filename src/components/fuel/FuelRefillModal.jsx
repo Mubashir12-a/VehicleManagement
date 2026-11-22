@@ -438,7 +438,7 @@ function FuelRefillDialogContent({
             onChange={(e) =>
               setFormData({ ...formData, stationName: e.target.value })
             }
-            placeholder="e.g. IndianOil, HP Auto Care, Bharat Petroleum"
+            placeholder="Enter station name"
             className="mt-1.5 w-full rounded-xl border border-white/10 bg-[#12161c] px-3.5 py-2 text-sm text-white focus:border-lime-400 focus:outline-none"
           />
           {/* Quick chips */}
@@ -474,7 +474,7 @@ function FuelRefillDialogContent({
               onChange={(e) =>
                 setFormData({ ...formData, location: e.target.value })
               }
-              placeholder="e.g. Senapati Bapat Rd, Baner, Highway NH4"
+              placeholder="Enter city / location"
               className="w-full rounded-xl border border-white/10 bg-[#12161c] px-3.5 py-2 pl-9 text-sm text-white focus:border-lime-400 focus:outline-none"
             />
             <MapPin className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
@@ -492,7 +492,7 @@ function FuelRefillDialogContent({
             onChange={(e) =>
               setFormData({ ...formData, notes: e.target.value })
             }
-            placeholder="e.g. Premium fuel, highway trip fill, tire pressure checked"
+            placeholder="Enter notes"
             className="mt-1.5 w-full rounded-xl border border-white/10 bg-[#12161c] px-3.5 py-2 text-sm text-white focus:border-lime-400 focus:outline-none"
           />
         </div>

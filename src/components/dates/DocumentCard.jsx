@@ -10,6 +10,7 @@ import {
   Trash2,
 } from 'lucide-react'
 import { getExpiryMeta } from './datesUtils'
+import { formatDisplayDate } from '../../utils/dateFormatter'
 
 const DOC_ICONS = {
   insurance: ShieldAlert,
@@ -130,7 +131,9 @@ export default function DocumentCard({
           {doc.issueDate && (
             <div className="flex items-center justify-between">
               <span className="text-zinc-500">Issued On:</span>
-              <span className="font-mono text-zinc-300">{doc.issueDate}</span>
+              <span className="font-mono text-zinc-300">
+                {formatDisplayDate(doc.issueDate)}
+              </span>
             </div>
           )}
 
@@ -141,7 +144,7 @@ export default function DocumentCard({
                 isExpired ? 'text-rose-400' : 'text-white'
               }`}
             >
-              {doc.expiryDate}
+              {formatDisplayDate(doc.expiryDate)}
             </span>
           </div>
 

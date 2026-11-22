@@ -6,6 +6,7 @@ import {
   useEffect,
   useState,
 } from 'react'
+import { useAuth } from '../context/AuthContextCore'
 import {
   defaultComponentServiceLogs,
   defaultFuelRefills,
@@ -30,12 +31,14 @@ import {
   createFuelRefillRecord,
   createServiceReminderRecord,
   createVehicleModificationRecord,
+  createVehicleRecord,
   createVehicleRepairRecord,
   deleteComponentServiceLogRecord,
   deleteFuelRefillRecord,
   deleteServiceReminderRecord,
   deleteVehicleDocumentRecord,
   deleteVehicleModificationRecord,
+  deleteVehicleRecord,
   deleteVehicleRepairRecord,
   fetchFleetData,
   updateFuelRefillRecord,
@@ -68,8 +71,12 @@ const defaultFallback = {
   statusData: mockStatusData,
   categoryData: mockCategoryData,
   primaryVehicle: defaultVehicle,
+  activeVehicleCode: defaultVehicle.id,
   latestRefill: defaultFuelRefills[0] || null,
   refresh: () => {},
+  switchActiveVehicle: async () => {},
+  addVehicle: async () => {},
+  deleteVehicle: async () => {},
   updatePrimaryVehicle: async () => {},
   logFuelRefill: async () => {},
   addFuelRefill: async () => {},
@@ -136,40 +143,138 @@ function useProvideFleetData() {
     categoryData: mockCategoryData,
   }))
 
-  const refresh = useCallback(async () => {
-    setState((prev) => ({ ...prev, loading: true }))
-    const result = await fetchFleetData()
-    setState({
-      loading: false,
-      ...result,
-    })
-  }, [])
+  const [activeVehicleCode, setActiveVehicleCode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('mkd_active_vehicle_code') || null
+    }
+    return null
+  })
+
+  const { user } = useAuth()
+
+  const refresh = useCallback(
+    async (preferredCode = null) => {
+      setState((prev) => ({ ...prev, loading: true }))
+      const targetCode = preferredCode || activeVehicleCode
+      const result = await fetchFleetData(user, targetCode)
+      setState({
+        loading: false,
+        ...result,
+      })
+      if (result.primaryVehicle?.id) {
+        setActiveVehicleCode(result.primaryVehicle.id)
+      }
+    },
+    [user, activeVehicleCode],
+  )
 
   useEffect(() => {
     let active = true
 
-    fetchFleetData().then((result) => {
+    fetchFleetData(user, activeVehicleCode).then((result) => {
       if (!active) return
       setState({
         loading: false,
         ...result,
       })
+      if (result.primaryVehicle?.id) {
+        setActiveVehicleCode(result.primaryVehicle.id)
+      }
     })
 
     return () => {
       active = false
     }
-  }, [])
+  }, [user, activeVehicleCode])
 
-  const primaryVehicle = state.vehicles[0] || defaultVehicle
+  const primaryVehicle =
+    (state.vehicles || []).find((v) => v.id === activeVehicleCode) ||
+    state.vehicles?.[0] ||
+    defaultVehicle
   const latestRefill = state.fuelRefills[0] || null
+
+  const switchActiveVehicle = useCallback(
+    async (targetVehicleCode) => {
+      if (!targetVehicleCode) return
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('mkd_active_vehicle_code', targetVehicleCode)
+        } catch {
+          // ignore
+        }
+      }
+      setActiveVehicleCode(targetVehicleCode)
+      setState((prev) => ({ ...prev, loading: true }))
+      const result = await fetchFleetData(user, targetVehicleCode)
+      setState({
+        loading: false,
+        ...result,
+      })
+    },
+    [user],
+  )
+
+  const addVehicle = useCallback(
+    async (vehicleInput) => {
+      setState((prev) => ({ ...prev, loading: true }))
+      const result = await createVehicleRecord(user, vehicleInput)
+      if (typeof window !== 'undefined' && result.vehicle?.id) {
+        try {
+          localStorage.setItem('mkd_active_vehicle_code', result.vehicle.id)
+        } catch {
+          // ignore
+        }
+      }
+      setActiveVehicleCode(result.vehicle.id)
+      const refreshed = await fetchFleetData(user, result.vehicle.id)
+      setState({
+        loading: false,
+        ...refreshed,
+      })
+      return result
+    },
+    [user],
+  )
+
+  const deleteVehicle = useCallback(
+    async (targetVehicleCode) => {
+      const targetVehicle = (state.vehicles || []).find(
+        (v) => v.id === targetVehicleCode,
+      )
+      if (!targetVehicle) return
+
+      await deleteVehicleRecord(targetVehicle)
+      const remaining = (state.vehicles || []).filter(
+        (v) => v.id !== targetVehicleCode,
+      )
+      const nextActiveCode = remaining[0]?.id || null
+
+      if (typeof window !== 'undefined' && nextActiveCode) {
+        try {
+          localStorage.setItem('mkd_active_vehicle_code', nextActiveCode)
+        } catch {
+          // ignore
+        }
+      }
+      setActiveVehicleCode(nextActiveCode)
+
+      const refreshed = await fetchFleetData(user, nextActiveCode)
+      setState({
+        loading: false,
+        ...refreshed,
+      })
+    },
+    [state.vehicles, user],
+  )
 
   const updatePrimaryVehicle = useCallback(
     async (updates) => {
       const result = await updatePrimaryVehicleRecord(primaryVehicle, updates)
       setState((prev) =>
         recalculateStateAnalytics(prev, {
-          vehicles: [result.vehicle],
+          vehicles: prev.vehicles.map((v) =>
+            v.id === result.vehicle.id ? result.vehicle : v,
+          ),
         }),
       )
       return result
@@ -192,7 +297,9 @@ function useProvideFleetData() {
           fuelLevel: nextRefills[0]?.fuelLevelAfter ?? result.vehicle.fuelLevel,
         }
         return recalculateStateAnalytics(prev, {
-          vehicles: [syncedVehicle],
+          vehicles: prev.vehicles.map((v) =>
+            v.id === syncedVehicle.id ? syncedVehicle : v,
+          ),
           fuelRefills: nextRefills,
         })
       })
@@ -223,7 +330,9 @@ function useProvideFleetData() {
           fuelLevel: nextRefills[0]?.fuelLevelAfter ?? result.vehicle.fuelLevel,
         }
         return recalculateStateAnalytics(prev, {
-          vehicles: [syncedVehicle],
+          vehicles: prev.vehicles.map((v) =>
+            v.id === syncedVehicle.id ? syncedVehicle : v,
+          ),
           fuelRefills: nextRefills,
         })
       })
@@ -247,7 +356,9 @@ function useProvideFleetData() {
           fuelLevel: nextRefills[0]?.fuelLevelAfter ?? 75,
         }
         return recalculateStateAnalytics(prev, {
-          vehicles: [syncedVehicle],
+          vehicles: prev.vehicles.map((v) =>
+            v.id === syncedVehicle.id ? syncedVehicle : v,
+          ),
           fuelRefills: nextRefills,
         })
       })
@@ -523,8 +634,12 @@ function useProvideFleetData() {
   return {
     ...state,
     primaryVehicle,
+    activeVehicleCode,
     latestRefill,
     refresh,
+    switchActiveVehicle,
+    addVehicle,
+    deleteVehicle,
     updatePrimaryVehicle,
     logFuelRefill: addFuelRefill, // Alias for cluster card
     addFuelRefill,

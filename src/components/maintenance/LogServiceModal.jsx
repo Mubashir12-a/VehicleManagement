@@ -134,7 +134,7 @@ function LogServiceDialogContent({
                 required
                 value={odometerKm}
                 onChange={(e) => setOdometerKm(e.target.value)}
-                placeholder="e.g. 3000"
+                placeholder="0"
                 className="w-full rounded-xl border border-white/10 bg-[#12161c] px-3.5 py-2.5 font-mono text-sm text-white focus:border-lime-400 focus:outline-none focus:ring-1 focus:ring-lime-400"
               />
               <span className="absolute right-3.5 top-1/2 -translate-y-1/2 font-mono text-xs text-zinc-500">
@@ -191,7 +191,7 @@ function LogServiceDialogContent({
               type="text"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="e.g. Motul 7100 10W-50 + Genuine Oil Filter changed"
+              placeholder="Enter workshop / parts / notes"
               className="mt-1.5 w-full rounded-xl border border-white/10 bg-[#12161c] px-3.5 py-2.5 text-sm text-white focus:border-lime-400 focus:outline-none focus:ring-1 focus:ring-lime-400"
             />
           </div>

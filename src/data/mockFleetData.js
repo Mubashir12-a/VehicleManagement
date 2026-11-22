@@ -1,71 +1,28 @@
 export const defaultVehicle = {
   id: 'VH-001',
-  name: 'Pulsar',
-  brand: 'Bajaj Auto',
-  model: 'NS400z',
+  name: 'Enter Vehicle Name',
+  brand: 'None',
+  model: 'None',
   category: 'Two Wheeler',
   subType: 'Bike',
-  engineCc: 373,
-  fuelType: 'Petrol (E10)',
-  plate: 'MH-14-JH-4001',
-  driver: 'Owner',
+  engineCc: 0,
+  fuelType: 'None',
+  plate: 'None',
+  driver: 'None',
   status: 'Active',
-  purchaseDate: '2024-01-15',
-  exShowroomPrice: 185000,
+  purchaseDate: 'DD-MM-YYYY',
+  exShowroomPrice: 0,
   mileage: 0,
   topSpeed: 0,
   speed: 0,
   fuelLevel: 0,
-  lastService: '2026-10-12',
-  nextService: '2026-12-15',
+  lastService: 'None',
+  nextService: 'None',
 }
 
 export const vehiclesList = [defaultVehicle]
 
-export const defaultFuelRefills = [
-  {
-    id: 'RF-003',
-    vehicleCode: 'VH-001',
-    refillDate: '2026-11-18',
-    odometerKm: 150,
-    liters: 12.0,
-    pricePerLiter: 105.5,
-    amountSpent: 1266.0,
-    fuelLevelAfter: 100,
-    fuelFillType: 'Full Tank',
-    stationName: 'IndianOil COCO',
-    location: 'Senapati Bapat Rd',
-    notes: 'Full tank before highway ride',
-  },
-  {
-    id: 'RF-002',
-    vehicleCode: 'VH-001',
-    refillDate: '2026-11-06',
-    odometerKm: 115,
-    liters: 10.0,
-    pricePerLiter: 104.8,
-    amountSpent: 1048.0,
-    fuelLevelAfter: 95,
-    fuelFillType: 'Full Tank',
-    stationName: 'HP Auto Care',
-    location: 'Baner Road',
-    notes: 'Regular weekend top-up',
-  },
-  {
-    id: 'RF-001',
-    vehicleCode: 'VH-001',
-    refillDate: '2026-10-24',
-    odometerKm: 80,
-    liters: 8.5,
-    pricePerLiter: 104.2,
-    amountSpent: 885.7,
-    fuelLevelAfter: 75,
-    fuelFillType: 'Partial / Reserve',
-    stationName: 'Bharat Petroleum',
-    location: 'Pune Nagar Rd',
-    notes: 'Reserve fill after delivery',
-  },
-]
+export const defaultFuelRefills = []
 
 export const defaultMaintenanceItems = [
   {
@@ -99,7 +56,7 @@ export const defaultMaintenanceItems = [
     id: 'MI-4',
     itemKey: 'front_tyre',
     label: 'Front Tyre Health',
-    category: 'Tyres & Brakes',
+    category: 'Tyres & Wheels',
     intervalKm: 20000,
     lastServiceOdo: 0,
     sortOrder: 4,
@@ -108,7 +65,7 @@ export const defaultMaintenanceItems = [
     id: 'MI-5',
     itemKey: 'rear_tyre',
     label: 'Rear Tyre Health',
-    category: 'Tyres & Brakes',
+    category: 'Tyres & Wheels',
     intervalKm: 15000,
     lastServiceOdo: 0,
     sortOrder: 5,
@@ -117,7 +74,7 @@ export const defaultMaintenanceItems = [
     id: 'MI-6',
     itemKey: 'battery',
     label: 'Battery Health',
-    category: 'Electrical & Body',
+    category: 'Electrical',
     intervalKm: 25000,
     lastServiceOdo: 0,
     sortOrder: 6,
@@ -126,7 +83,7 @@ export const defaultMaintenanceItems = [
     id: 'MI-7',
     itemKey: 'brake_front',
     label: 'Brake Pads Front',
-    category: 'Tyres & Brakes',
+    category: 'Brakes',
     intervalKm: 10000,
     lastServiceOdo: 0,
     sortOrder: 7,
@@ -135,7 +92,7 @@ export const defaultMaintenanceItems = [
     id: 'MI-8',
     itemKey: 'brake_rear',
     label: 'Brake Pads Rear',
-    category: 'Tyres & Brakes',
+    category: 'Brakes',
     intervalKm: 10000,
     lastServiceOdo: 0,
     sortOrder: 8,
@@ -153,7 +110,7 @@ export const defaultMaintenanceItems = [
     id: 'MI-10',
     itemKey: 'spark_plug',
     label: 'Spark Plug',
-    category: 'Fluids & Engine',
+    category: 'Electrical',
     intervalKm: 12000,
     lastServiceOdo: 0,
     sortOrder: 10,
@@ -189,7 +146,7 @@ export const defaultMaintenanceItems = [
     id: 'MI-14',
     itemKey: 'brake_fluid_front',
     label: 'Brake Fluid Front',
-    category: 'Fluids & Engine',
+    category: 'Brakes',
     intervalKm: 15000,
     lastServiceOdo: 0,
     sortOrder: 14,
@@ -198,7 +155,7 @@ export const defaultMaintenanceItems = [
     id: 'MI-15',
     itemKey: 'brake_fluid_rear',
     label: 'Brake Fluid Rear',
-    category: 'Fluids & Engine',
+    category: 'Brakes',
     intervalKm: 15000,
     lastServiceOdo: 0,
     sortOrder: 15,
@@ -236,147 +193,11 @@ export const defaultComponentServiceLogs = []
 
 export const defaultVehicleRepairs = []
 
-const todayDateStr = new Date().toISOString().split('T')[0]
-
-function calcFutureDate(years) {
-  const d = new Date()
-  d.setFullYear(d.getFullYear() + years)
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
-
-export const defaultVehicleDocuments = [
-  {
-    id: 'DOC-1',
-    vehicleCode: 'VH-001',
-    docType: 'insurance_comprehensive',
-    title: 'Comprehensive Insurance (Own Damage)',
-    docNumber: 'ABC-00000',
-    issuer: 'Official Provider',
-    issueDate: todayDateStr,
-    durationYears: 1,
-    expiryDate: calcFutureDate(1),
-    maxOdometerKm: 0,
-    amountPaid: 0,
-    notes: '',
-  },
-  {
-    id: 'DOC-2',
-    vehicleCode: 'VH-001',
-    docType: 'insurance_third_party',
-    title: 'Third Party Insurance',
-    docNumber: 'ABC-00000',
-    issuer: 'Official Provider',
-    issueDate: todayDateStr,
-    durationYears: 5,
-    expiryDate: calcFutureDate(5),
-    maxOdometerKm: 0,
-    amountPaid: 0,
-    notes: '',
-  },
-  {
-    id: 'DOC-3',
-    vehicleCode: 'VH-001',
-    docType: 'rc',
-    title: 'Registration Certificate (RC)',
-    docNumber: 'ABC-00000',
-    issuer: 'Official Provider',
-    issueDate: todayDateStr,
-    durationYears: 15,
-    expiryDate: calcFutureDate(15),
-    maxOdometerKm: 0,
-    amountPaid: 0,
-    notes: '',
-  },
-  {
-    id: 'DOC-4',
-    vehicleCode: 'VH-001',
-    docType: 'puc',
-    title: 'PUC Certificate',
-    docNumber: 'ABC-00000',
-    issuer: 'Official Provider',
-    issueDate: todayDateStr,
-    durationYears: 1,
-    expiryDate: calcFutureDate(1),
-    maxOdometerKm: 0,
-    amountPaid: 0,
-    notes: '',
-  },
-  {
-    id: 'DOC-5',
-    vehicleCode: 'VH-001',
-    docType: 'warranty',
-    title: 'Manufacturer Vehicle Warranty',
-    docNumber: 'ABC-00000',
-    issuer: 'Official Provider',
-    issueDate: todayDateStr,
-    durationYears: 5,
-    expiryDate: calcFutureDate(5),
-    maxOdometerKm: 0,
-    amountPaid: 0,
-    notes: '',
-  },
-]
+export const defaultVehicleDocuments = []
 
 export const defaultServiceReminders = []
 
-export const defaultVehicleModifications = [
-  {
-    id: 'MOD-001',
-    vehicleCode: 'VH-001',
-    title: 'Engine Crash Guard & Frame Sliders',
-    category: 'Protection',
-    brand: 'Zana Motorcycles',
-    installedDate: '2024-02-10',
-    odometerKm: 250,
-    cost: 3850,
-    installedBy: 'Workshop',
-    status: 'Installed',
-    notes: 'Heavy duty black powder-coated with dual nylon puck sliders',
-    createdAt: '2024-02-10T10:00:00Z',
-  },
-  {
-    id: 'MOD-002',
-    vehicleCode: 'VH-001',
-    title: 'Radiator Grill Guard',
-    category: 'Protection',
-    brand: 'MotoTrend',
-    installedDate: '2024-02-15',
-    odometerKm: 320,
-    cost: 1450,
-    installedBy: 'Self',
-    status: 'Installed',
-    notes: 'Honeycomb laser-cut stainless steel mesh',
-    createdAt: '2024-02-15T11:00:00Z',
-  },
-  {
-    id: 'MOD-003',
-    vehicleCode: 'VH-001',
-    title: 'ECE 22.06 Full Face Helmet',
-    category: 'Riding Gear & Apparel',
-    brand: 'Axor Apex',
-    installedDate: '2024-02-20',
-    odometerKm: null,
-    cost: 4999,
-    installedBy: 'Retail Store / Showroom',
-    status: 'Installed',
-    notes: 'Dual visor, anti-fog pinlock ready, ECE & DOT certified',
-    createdAt: '2024-02-20T12:00:00Z',
-  },
-  {
-    id: 'MOD-004',
-    vehicleCode: 'VH-001',
-    title: 'All-Weather Waterproof Bike Cover',
-    category: 'Vehicle Care & Covers',
-    brand: 'Polco / Raida',
-    installedDate: '2024-02-25',
-    odometerKm: null,
-    cost: 1199,
-    installedBy: 'Online / E-Commerce',
-    status: 'Installed',
-    notes: 'Heavy-duty Oxford fabric with mirror pockets and buckle lock',
-    createdAt: '2024-02-25T14:00:00Z',
-  },
-]
+export const defaultVehicleModifications = []
 
 export const fleetSummary = {
   totalVehicles: 1,
@@ -387,7 +208,7 @@ export const fleetSummary = {
   monthlyFuelSpend: 0,
   monthlyMileage: 0,
   fleetUtilization: 0,
-  totalModificationsSpend: 11498,
+  totalModificationsSpend: 0,
   totalSpendTillNow: 0,
 }
 
@@ -398,39 +219,11 @@ export const fleetStatusData = [
   { name: 'Out of Service', value: 0, color: '#f43f5e' },
 ]
 
-export const monthlyFleetTrends = [
-  { month: 'Jun', mileage: 0, fuelCost: 0, maintenanceCost: 0 },
-  { month: 'Jul', mileage: 0, fuelCost: 0, maintenanceCost: 0 },
-  { month: 'Aug', mileage: 0, fuelCost: 0, maintenanceCost: 0 },
-  { month: 'Sep', mileage: 0, fuelCost: 0, maintenanceCost: 0 },
-  { month: 'Oct', mileage: 80, fuelCost: 885.7, maintenanceCost: 0 },
-  { month: 'Nov', mileage: 70, fuelCost: 2314.0, maintenanceCost: 0 },
-]
+export const monthlyFleetTrends = []
 
 export const vehicleCategoryData = [
   { category: 'Two Wheeler', active: 1, total: 1 },
   { category: 'Four Wheeler', active: 0, total: 0 },
 ]
 
-export const maintenanceSchedule = [
-  {
-    id: 'MNT-101',
-    vehicleId: 'VH-001',
-    vehicleName: 'Bajaj Pulsar NS400z',
-    serviceType: 'First Free Inspection & Oil Check',
-    dueDate: '2026-12-15',
-    estimatedCost: 0,
-    priority: 'Medium',
-    status: 'Scheduled',
-  },
-  {
-    id: 'MNT-102',
-    vehicleId: 'VH-001',
-    vehicleName: 'Bajaj Pulsar NS400z',
-    serviceType: 'Chain Cleaning & Lube',
-    dueDate: '2026-11-30',
-    estimatedCost: 150,
-    priority: 'Low',
-    status: 'Scheduled',
-  },
-]
+export const maintenanceSchedule = []

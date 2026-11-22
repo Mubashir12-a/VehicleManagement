@@ -221,7 +221,7 @@ function EditDocumentDialogContent({ doc, onClose, onSubmit }) {
                   required
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g. Comprehensive Insurance"
+                  placeholder="Enter document title"
                   className="mt-1.5 w-full rounded-xl border border-white/10 bg-[#12161c] px-3.5 py-2.5 text-sm text-white focus:border-lime-400 focus:outline-none focus:ring-1 focus:ring-lime-400"
                 />
               </div>
@@ -235,7 +235,7 @@ function EditDocumentDialogContent({ doc, onClose, onSubmit }) {
                     type="text"
                     value={docNumber}
                     onChange={(e) => setDocNumber(e.target.value)}
-                    placeholder="ABC-00000"
+                    placeholder="Enter policy / cert #"
                     className="mt-1.5 w-full rounded-xl border border-white/10 bg-[#12161c] px-3.5 py-2.5 font-mono text-sm text-white focus:border-lime-400 focus:outline-none focus:ring-1 focus:ring-lime-400"
                   />
                 </div>
@@ -248,7 +248,7 @@ function EditDocumentDialogContent({ doc, onClose, onSubmit }) {
                     type="text"
                     value={issuer}
                     onChange={(e) => setIssuer(e.target.value)}
-                    placeholder="Official Provider"
+                    placeholder="Enter issuer / provider"
                     className="mt-1.5 w-full rounded-xl border border-white/10 bg-[#12161c] px-3.5 py-2.5 text-sm text-white focus:border-lime-400 focus:outline-none focus:ring-1 focus:ring-lime-400"
                   />
                 </div>
@@ -386,7 +386,7 @@ function EditDocumentDialogContent({ doc, onClose, onSubmit }) {
                   rows={2}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="e.g. Zero-depreciation cover with RSA"
+                  placeholder="Enter notes"
                   className="mt-1.5 w-full rounded-xl border border-white/10 bg-[#12161c] px-3.5 py-2.5 text-sm text-white focus:border-lime-400 focus:outline-none focus:ring-1 focus:ring-lime-400"
                 />
               </div>

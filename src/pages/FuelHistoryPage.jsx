@@ -20,6 +20,7 @@ import PageHeader from '../components/common/PageHeader'
 import FuelAnalyticsGraph from '../components/fuel/FuelAnalyticsGraph'
 import FuelEntrySidebarCard from '../components/fuel/FuelEntrySidebarCard'
 import { useFleetData } from '../hooks/useFleetData'
+import { formatDisplayDate } from '../utils/dateFormatter'
 
 export default function FuelHistoryPage() {
   const {
@@ -579,7 +580,7 @@ export default function FuelHistoryPage() {
                           <div className="mt-1 flex flex-wrap items-center gap-2.5 text-xs text-zinc-400">
                             <span className="flex items-center gap-1 font-mono text-[11px]">
                               <Calendar className="h-3 w-3 text-zinc-500" />
-                              {refill.refillDate}
+                              {formatDisplayDate(refill.refillDate)}
                             </span>
 
                             {refill.location && (
@@ -678,7 +679,7 @@ export default function FuelHistoryPage() {
                 <strong className="text-white">
                   {deletingRefill.stationName || 'Fuel Refill'}
                 </strong>{' '}
-                on {deletingRefill.refillDate}
+                on {formatDisplayDate(deletingRefill.refillDate)}
               </p>
               <p className="mt-1 font-mono text-zinc-400">
                 {deletingRefill.liters} L · ₹{deletingRefill.amountSpent} · Odo:{' '}

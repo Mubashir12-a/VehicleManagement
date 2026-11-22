@@ -116,7 +116,7 @@ function AddRepairDialogContent({
               required
               value={repairTitle}
               onChange={(e) => setRepairTitle(e.target.value)}
-              placeholder="e.g. Right Side Rearview Mirror Replacement"
+              placeholder="Enter repair title"
               className="mt-1.5 w-full rounded-xl border border-white/10 bg-[#12161c] px-3.5 py-2.5 text-sm text-white focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400"
             />
           </div>
@@ -151,7 +151,7 @@ function AddRepairDialogContent({
                   required
                   value={odometerKm}
                   onChange={(e) => setOdometerKm(e.target.value)}
-                  placeholder="150"
+                  placeholder="0"
                   className="w-full rounded-xl border border-white/10 bg-[#12161c] px-3.5 py-2.5 font-mono text-sm text-white focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400"
                 />
                 <span className="absolute right-3.5 top-1/2 -translate-y-1/2 font-mono text-xs text-zinc-500">
@@ -205,7 +205,7 @@ function AddRepairDialogContent({
               type="text"
               value={garageName}
               onChange={(e) => setGarageName(e.target.value)}
-              placeholder="e.g. Authorized Bajaj Service Centre / Self DIY"
+              placeholder="Enter workshop / garage name"
               className="mt-1.5 w-full rounded-xl border border-white/10 bg-[#12161c] px-3.5 py-2.5 text-sm text-white focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400"
             />
           </div>
@@ -219,7 +219,7 @@ function AddRepairDialogContent({
               rows={2}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="e.g. Mirror broken during parking; OEM part replaced under invoice #B-883"
+              placeholder="Enter notes / invoices"
               className="mt-1.5 w-full rounded-xl border border-white/10 bg-[#12161c] px-3.5 py-2.5 text-sm text-white focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400"
             />
           </div>

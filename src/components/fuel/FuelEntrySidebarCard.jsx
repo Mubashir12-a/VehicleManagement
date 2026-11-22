@@ -415,7 +415,7 @@ function FuelEntrySidebarForm({
             onChange={(e) =>
               setFormData({ ...formData, stationName: e.target.value })
             }
-            placeholder="e.g. IndianOil, Bharat Petroleum"
+            placeholder="Enter station name"
             className="mt-1 w-full rounded-xl border border-white/10 bg-[#12161c] px-3 py-1.5 text-xs text-white focus:border-lime-400 focus:outline-none"
           />
           <div className="mt-1.5 flex flex-wrap gap-1">
@@ -450,7 +450,7 @@ function FuelEntrySidebarForm({
               onChange={(e) =>
                 setFormData({ ...formData, location: e.target.value })
               }
-              placeholder="e.g. Senapati Bapat Rd, Baner"
+              placeholder="Enter city / location"
               className="w-full rounded-xl border border-white/10 bg-[#12161c] px-3 py-1.5 pl-8 text-xs text-white focus:border-lime-400 focus:outline-none"
             />
             <MapPin className="pointer-events-none absolute left-2.5 top-2 h-3.5 w-3.5 text-zinc-500" />
@@ -468,7 +468,7 @@ function FuelEntrySidebarForm({
             onChange={(e) =>
               setFormData({ ...formData, notes: e.target.value })
             }
-            placeholder="e.g. Premium fuel, highway refill"
+            placeholder="Enter notes"
             className="mt-1 w-full rounded-xl border border-white/10 bg-[#12161c] px-3 py-1.5 text-xs text-white focus:border-lime-400 focus:outline-none"
           />
         </div>

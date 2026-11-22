@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { computeLatestFuelMileage } from '../../services/fleetService'
+import { formatDisplayDate } from '../../utils/dateFormatter'
 import { downloadVehiclePdf } from '../../utils/vehiclePdfGenerator'
 
 function parseDate(dateStr) {
@@ -20,14 +21,7 @@ function parseDate(dateStr) {
 }
 
 function formatDate(dateStr) {
-  if (!dateStr) return '—'
-  const d = parseDate(dateStr)
-  if (!d) return String(dateStr)
-  return d.toLocaleDateString('en-IN', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  })
+  return formatDisplayDate(dateStr)
 }
 
 function getDateRangeBounds(rangeKey, customStart, customEnd) {

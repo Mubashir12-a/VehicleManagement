@@ -6,6 +6,7 @@ import {
   Wrench,
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { formatDisplayDate } from '../../utils/dateFormatter'
 
 export default function UnifiedServiceTimeline({
   items = [],
@@ -193,7 +194,7 @@ export default function UnifiedServiceTimeline({
                           </div>
                           <div className="flex items-center gap-1 font-mono text-[11px] text-zinc-500">
                             <Calendar className="h-3 w-3" />
-                            {event.date}
+                            {formatDisplayDate(event.date)}
                           </div>
                         </div>
 

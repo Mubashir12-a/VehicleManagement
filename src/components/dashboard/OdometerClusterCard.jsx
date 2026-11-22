@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAnimatedNumber } from '../../hooks/useAnimatedNumber'
 import { computeLatestFuelMileage } from '../../services/fleetService'
+import { formatDisplayDate } from '../../utils/dateFormatter'
 
 function getTodayString() {
   const d = new Date()
@@ -517,7 +518,7 @@ export default function OdometerClusterCard({
             </div>
             {latestRefill ? (
               <p className="text-zinc-400">
-                {latestRefill.refillDate}
+                {formatDisplayDate(latestRefill.refillDate)}
                 {latestRefill.location ? ` · ${latestRefill.location}` : ''} ·{' '}
                 <span className="font-semibold text-zinc-200">
                   {latestRefill.odometerKm.toLocaleString('en-IN')} km

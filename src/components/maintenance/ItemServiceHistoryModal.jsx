@@ -1,5 +1,6 @@
 import { Calendar, History, IndianRupee, Plus, Trash2, X } from 'lucide-react'
 import { useState } from 'react'
+import { formatDisplayDate } from '../../utils/dateFormatter'
 
 function ItemServiceHistoryDialogContent({
   onClose,
@@ -135,7 +136,7 @@ function ItemServiceHistoryDialogContent({
                   <div className="flex items-center gap-2 text-[11px] text-zinc-500">
                     <span className="inline-flex items-center gap-1">
                       <Calendar className="h-3 w-3" />
-                      {log.serviceDate}
+                      {formatDisplayDate(log.serviceDate)}
                     </span>
                   </div>
                 </div>

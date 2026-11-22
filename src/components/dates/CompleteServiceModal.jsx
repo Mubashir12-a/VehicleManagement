@@ -133,7 +133,7 @@ function CompleteServiceDialogContent({
                 required
                 value={amountPaid}
                 onChange={(e) => setAmountPaid(e.target.value)}
-                placeholder="e.g. 1850 (0 if free)"
+                placeholder="0"
                 className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-mono font-bold text-lime-400 placeholder:text-zinc-600 focus:border-lime-400 focus:outline-none focus:ring-1 focus:ring-lime-400"
               />
             </div>
@@ -163,7 +163,7 @@ function CompleteServiceDialogContent({
                 min="0"
                 value={completedOdometerKm}
                 onChange={(e) => setCompletedOdometerKm(e.target.value)}
-                placeholder={currentMileage ? String(currentMileage) : 'e.g. 500'}
+                placeholder="0"
                 className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-mono text-white placeholder:text-zinc-600 focus:border-lime-400 focus:outline-none focus:ring-1 focus:ring-lime-400"
               />
             </div>
@@ -176,7 +176,7 @@ function CompleteServiceDialogContent({
                 type="text"
                 value={invoiceNo}
                 onChange={(e) => setInvoiceNo(e.target.value)}
-                placeholder="e.g. INV-2026-8942"
+                placeholder="Enter invoice #"
                 className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-zinc-600 focus:border-lime-400 focus:outline-none focus:ring-1 focus:ring-lime-400"
               />
             </div>
@@ -191,7 +191,7 @@ function CompleteServiceDialogContent({
               type="text"
               value={serviceCenter}
               onChange={(e) => setServiceCenter(e.target.value)}
-              placeholder="e.g. KTM Authorized Service, Indiranagar"
+              placeholder="Enter workshop / service center"
               className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-zinc-600 focus:border-lime-400 focus:outline-none focus:ring-1 focus:ring-lime-400"
             />
           </div>
@@ -205,7 +205,7 @@ function CompleteServiceDialogContent({
               rows={3}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="e.g. Engine oil + oil filter replaced. Chain cleaned, lubed, and adjusted. Coolant topped up."
+              placeholder="Enter service notes"
               className="w-full resize-none rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-zinc-600 focus:border-lime-400 focus:outline-none focus:ring-1 focus:ring-lime-400"
             />
           </div>

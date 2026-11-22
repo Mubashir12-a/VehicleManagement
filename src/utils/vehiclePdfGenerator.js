@@ -1,3 +1,5 @@
+import { formatDisplayDate } from './dateFormatter'
+
 /**
  * Standalone client-side vector PDF generator for MKD Vehicle Reports.
  * Generates valid multi-page PDF 1.4 binary data and triggers immediate browser download.
@@ -215,7 +217,7 @@ export function downloadVehiclePdf({
   doc.drawText('REGISTRATION', 52 + colW, sRow1 + 5, 6, true, 0.5, 0.55, 0.6)
   doc.drawText(primaryVehicle?.plate || '—', 52 + colW, sRow1 - 5, 8, true, 0.64, 0.90, 0.21)
   doc.drawText('PURCHASE DATE', 52 + colW, sRow2 + 5, 6, true, 0.5, 0.55, 0.6)
-  doc.drawText(primaryVehicle?.purchaseDate || '—', 52 + colW, sRow2 - 5, 8, false, 0.9, 0.9, 0.9)
+  doc.drawText(formatDisplayDate(primaryVehicle?.purchaseDate), 52 + colW, sRow2 - 5, 8, false, 0.9, 0.9, 0.9)
 
   // Col 3
   doc.drawText('ENGINE & FUEL', 52 + colW * 2, sRow1 + 5, 6, true, 0.5, 0.55, 0.6)
@@ -256,7 +258,7 @@ export function downloadVehiclePdf({
       doc.drawRect(40, doc.currentY - 15, 515, 15, isEven ? [0.06, 0.08, 0.11] : [0.04, 0.05, 0.07])
       
       let curX = 46
-      doc.drawText(r.refillDate || '—', curX, doc.currentY - 11, 7, false, 0.9, 0.9, 0.9)
+      doc.drawText(formatDisplayDate(r.refillDate), curX, doc.currentY - 11, 7, false, 0.9, 0.9, 0.9)
       curX += fuelCols[0]
       doc.drawText(r.stationName ? `${r.stationName}${r.location ? ` (${r.location})` : ''}` : 'Station', curX, doc.currentY - 11, 7, true, 1, 1, 1)
       curX += fuelCols[1]
@@ -284,14 +286,14 @@ export function downloadVehiclePdf({
   const allServices = [
     ...filteredCompletedServices.map((s) => ({
       title: s.title,
-      date: s.completedDate,
+      date: formatDisplayDate(s.completedDate),
       odo: s.completedOdometerKm,
       center: s.serviceCenter || 'Service Center',
       amount: s.amountPaid,
     })),
     ...filteredServiceLogs.map((l) => ({
       title: l.componentName,
-      date: l.serviceDate,
+      date: formatDisplayDate(l.serviceDate),
       odo: l.odometerKm,
       center: l.serviceCenter || 'Workshop',
       amount: l.cost,
@@ -338,7 +340,7 @@ export function downloadVehiclePdf({
       let curX = 46
       doc.drawText(rep.title || 'Repair', curX, doc.currentY - 11, 7, true, 1, 1, 1)
       curX += repCols[0]
-      doc.drawText(rep.repairDate || '—', curX, doc.currentY - 11, 7, false, 0.9, 0.9, 0.9)
+      doc.drawText(formatDisplayDate(rep.repairDate), curX, doc.currentY - 11, 7, false, 0.9, 0.9, 0.9)
       curX += repCols[1]
       doc.drawText(rep.odometerKm ? `${Number(rep.odometerKm).toLocaleString('en-IN')} km` : '—', curX, doc.currentY - 11, 7, false, 0.8, 0.85, 0.9)
       curX += repCols[2]
@@ -369,7 +371,7 @@ export function downloadVehiclePdf({
       curX += modCols[1]
       doc.drawText(mod.brand || '—', curX, doc.currentY - 11, 7, false, 0.8, 0.85, 0.9)
       curX += modCols[2]
-      doc.drawText(mod.installedDate || '—', curX, doc.currentY - 11, 7, false, 0.9, 0.9, 0.9)
+      doc.drawText(formatDisplayDate(mod.installedDate), curX, doc.currentY - 11, 7, false, 0.9, 0.9, 0.9)
       curX += modCols[3]
       doc.drawText(`Rs. ${Number(mod.cost || 0).toLocaleString('en-IN')}`, curX, doc.currentY - 11, 7, true, 0.64, 0.90, 0.21)
 
@@ -398,7 +400,7 @@ export function downloadVehiclePdf({
       curX += docCols[0]
       doc.drawText(docNum, curX, doc.currentY - 11, 7, false, 0.64, 0.90, 0.21)
       curX += docCols[1]
-      doc.drawText(d.expiryDate || '—', curX, doc.currentY - 11, 7, false, 0.9, 0.9, 0.9)
+      doc.drawText(formatDisplayDate(d.expiryDate), curX, doc.currentY - 11, 7, false, 0.9, 0.9, 0.9)
       curX += docCols[2]
       doc.drawText(issuer, curX, doc.currentY - 11, 7, false, 0.8, 0.85, 0.9)
 

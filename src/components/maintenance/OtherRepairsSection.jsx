@@ -10,6 +10,7 @@ import {
   Wrench,
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { formatDisplayDate } from '../../utils/dateFormatter'
 
 export default function OtherRepairsSection({
   repairs = [],
@@ -185,7 +186,7 @@ export default function OtherRepairsSection({
                     <td className="whitespace-nowrap px-4 py-3.5 font-mono text-zinc-400">
                       <div className="flex items-center gap-1">
                         <Calendar className="h-3 w-3 text-zinc-500" />
-                        {r.repairDate}
+                        {formatDisplayDate(r.repairDate)}
                       </div>
                     </td>
                     <td className="whitespace-nowrap px-4 py-3.5 text-zinc-400">

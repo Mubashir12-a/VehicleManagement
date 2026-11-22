@@ -10,6 +10,7 @@ import {
   User,
   Wrench,
 } from 'lucide-react'
+import { formatDisplayDate } from '../../utils/dateFormatter'
 
 const CATEGORY_STYLES = {
   'Riding Gear & Apparel': 'border-purple-500/30 bg-purple-500/10 text-purple-400',
@@ -33,14 +34,7 @@ const CATEGORY_STYLES = {
 }
 
 function formatDate(dateStr) {
-  if (!dateStr) return '—'
-  const d = new Date(dateStr.includes('T') ? dateStr : `${dateStr}T00:00:00`)
-  if (isNaN(d.getTime())) return dateStr
-  return d.toLocaleDateString('en-IN', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  })
+  return formatDisplayDate(dateStr)
 }
 
 function isGearOrCareCategory(cat) {

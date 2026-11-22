@@ -8,6 +8,15 @@ export const TWO_WHEELER_SUBTYPES = [
   'Superbike',
 ]
 
+export const FOUR_WHEELER_SUBTYPES = [
+  'Sedan',
+  'Hatchback',
+  'Compact SUV',
+  'SUV',
+  'Sports Car',
+  'Pickup Truck',
+]
+
 export const ILLUSTRATION_TIERS = [
   {
     key: 'ns400z',
@@ -70,46 +79,183 @@ export const ILLUSTRATION_TIERS = [
     badgeColor: 'bg-blue-50 text-blue-700 ring-blue-600/20',
   },
   {
-    key: 'normal_car',
+    key: 'sedan',
     category: 'Four Wheeler',
-    subType: 'Car',
-    label: 'Normal Car',
-    rule: 'Four-Wheeler up to 1,000 cc',
-    sampleCc: 998,
-    badgeColor: 'bg-sky-50 text-sky-700 ring-sky-600/20',
+    subType: 'Sedan',
+    label: 'Executive Sedan',
+    rule: 'Notchback Sedan / Saloon',
+    sampleCc: 1498,
+    imageSrc: '/illustrations/sedan.png',
+    badgeColor: 'bg-blue-50 text-blue-700 ring-blue-600/20',
   },
   {
-    key: 'rally_car',
+    key: 'hatchback',
     category: 'Four Wheeler',
-    subType: 'Car',
-    label: 'Rally Car',
-    rule: 'Four-Wheeler 1,001 – 3,000 cc',
-    sampleCc: 1998,
+    subType: 'Hatchback',
+    label: 'Sport Hatchback',
+    rule: 'Hot Hatch / 5-Door Compact',
+    sampleCc: 1197,
+    imageSrc: '/illustrations/hatchback.png',
+    badgeColor: 'bg-lime-50 text-lime-700 ring-lime-600/20',
+  },
+  {
+    key: 'compact_suv',
+    category: 'Four Wheeler',
+    subType: 'Compact SUV',
+    label: 'Compact SUV / Crossover',
+    rule: 'Urban Crossover & Compact SUV',
+    sampleCc: 1497,
+    imageSrc: '/illustrations/compact_suv.png',
+    badgeColor: 'bg-teal-50 text-teal-700 ring-teal-600/20',
+  },
+  {
+    key: 'suv',
+    category: 'Four Wheeler',
+    subType: 'SUV',
+    label: 'Full-Size SUV',
+    rule: 'Rugged 4x4 / Full-Size SUV',
+    sampleCc: 2755,
+    imageSrc: '/illustrations/suv.png',
     badgeColor: 'bg-amber-50 text-amber-700 ring-amber-600/20',
   },
   {
     key: 'sports_car',
     category: 'Four Wheeler',
-    subType: 'Car',
-    label: 'Sports Car',
-    rule: 'Four-Wheeler above 3,000 cc',
-    sampleCc: 3996,
-    badgeColor: 'bg-orange-50 text-orange-700 ring-orange-600/20',
+    subType: 'Sports Car',
+    label: 'Performance Sports Coupe',
+    rule: 'Aero GT / Track Supercar',
+    sampleCc: 2998,
+    imageSrc: '/illustrations/sports_car.png',
+    badgeColor: 'bg-rose-50 text-rose-700 ring-rose-600/20',
+  },
+  {
+    key: 'pickup',
+    category: 'Four Wheeler',
+    subType: 'Pickup Truck',
+    label: 'Utility Pickup Truck',
+    rule: 'Dual-Cab Cargo Bed 4x4',
+    sampleCc: 2393,
+    imageSrc: '/illustrations/pickup.png',
+    badgeColor: 'bg-purple-50 text-purple-700 ring-purple-600/20',
   },
 ]
 
 export function resolveVehicleVisual({ category, subType, engineCc, model }) {
   const cc = Number(engineCc) || 0
   const m = String(model || '').toLowerCase()
+  const st = String(subType || '').toLowerCase()
 
   if (category === 'Four Wheeler') {
-    if (cc > 3000) {
+    if (
+      st === 'hatchback' ||
+      st.includes('hatch') ||
+      m.includes('hatch') ||
+      m.includes('swift') ||
+      m.includes('i20') ||
+      m.includes('polo') ||
+      m.includes('baleno') ||
+      m.includes('golf') ||
+      m.includes('tiago') ||
+      m.includes('altroz')
+    ) {
+      return ILLUSTRATION_TIERS.find((t) => t.key === 'hatchback')
+    }
+
+    if (
+      st === 'pickup truck' ||
+      st.includes('pickup') ||
+      st.includes('truck') ||
+      m.includes('pickup') ||
+      m.includes('truck') ||
+      m.includes('hilux') ||
+      m.includes('d-max') ||
+      m.includes('isuzu') ||
+      m.includes('f-150') ||
+      m.includes('ranger')
+    ) {
+      return ILLUSTRATION_TIERS.find((t) => t.key === 'pickup')
+    }
+
+    if (
+      st === 'compact suv' ||
+      st.includes('compact') ||
+      st.includes('cross') ||
+      m.includes('brezza') ||
+      m.includes('creta') ||
+      m.includes('seltos') ||
+      m.includes('nexon') ||
+      m.includes('venue') ||
+      m.includes('kiger') ||
+      m.includes('magnite') ||
+      m.includes('sonet') ||
+      m.includes('fronx') ||
+      m.includes('taigun') ||
+      m.includes('kushaq')
+    ) {
+      return ILLUSTRATION_TIERS.find((t) => t.key === 'compact_suv')
+    }
+
+    if (
+      st === 'sports car' ||
+      st.includes('sport') ||
+      st.includes('coupe') ||
+      st.includes('gt') ||
+      m.includes('supra') ||
+      m.includes('mustang') ||
+      m.includes('porsche') ||
+      m.includes('ferrari') ||
+      m.includes('lamborghini') ||
+      m.includes('corvette') ||
+      m.includes('m4') ||
+      m.includes('m3') ||
+      m.includes('amg') ||
+      m.includes('gtr') ||
+      m.includes('gt-r')
+    ) {
       return ILLUSTRATION_TIERS.find((t) => t.key === 'sports_car')
     }
-    if (cc > 1000) {
-      return ILLUSTRATION_TIERS.find((t) => t.key === 'rally_car')
+
+    if (
+      st === 'suv' ||
+      st.includes('suv') ||
+      m.includes('suv') ||
+      m.includes('thar') ||
+      m.includes('fortuner') ||
+      m.includes('scorpio') ||
+      m.includes('harrier') ||
+      m.includes('safari') ||
+      m.includes('defender') ||
+      m.includes('land cruiser') ||
+      m.includes('xuv') ||
+      m.includes('endeavour')
+    ) {
+      return ILLUSTRATION_TIERS.find((t) => t.key === 'suv')
     }
-    return ILLUSTRATION_TIERS.find((t) => t.key === 'normal_car')
+
+    if (
+      st === 'sedan' ||
+      st.includes('sedan') ||
+      m.includes('sedan') ||
+      m.includes('city') ||
+      m.includes('verna') ||
+      m.includes('dzire') ||
+      m.includes('ciaz') ||
+      m.includes('civic') ||
+      m.includes('octavia') ||
+      m.includes('virtus') ||
+      m.includes('slavia') ||
+      m.includes('aura') ||
+      m.includes('amaze') ||
+      m.includes('camry')
+    ) {
+      return ILLUSTRATION_TIERS.find((t) => t.key === 'sedan')
+    }
+
+    // Default Four Wheeler if not specified
+    return (
+      ILLUSTRATION_TIERS.find((t) => t.key === 'sedan') ||
+      ILLUSTRATION_TIERS.find((t) => t.category === 'Four Wheeler')
+    )
   }
 
   // Two Wheeler
