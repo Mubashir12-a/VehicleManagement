@@ -2335,3 +2335,89 @@ export function computeLatestFuelMileage(fuelRefills = []) {
 
   return 0
 }
+
+/**
+ * Computes latest running fuel cost per kilometer (₹/km).
+ * Prioritizes direct full tank intervals, multi-fill spans, or most recent trip interval.
+ */
+export function computeLatestCostPerKm(fuelRefills = []) {
+  if (!fuelRefills || fuelRefills.length < 2) return 0
+
+  const list = [...fuelRefills].sort((a, b) => {
+    const dateA = String(a.refillDate || '')
+    const dateB = String(b.refillDate || '')
+    if (dateA !== dateB) return dateA.localeCompare(dateB)
+    return (Number(a.odometerKm) || 0) - (Number(b.odometerKm) || 0)
+  })
+
+  if (list.length < 2) return 0
+
+  // 1. Direct Full Tank -> Full Tank interval
+  for (let i = list.length - 1; i >= 1; i--) {
+    const curr = list[i]
+    const prev = list[i - 1]
+    const currOdo = Number(curr.odometerKm) || 0
+    const prevOdo = Number(prev.odometerKm) || 0
+    const tripDistance = Math.max(0, currOdo - prevOdo)
+    const amountSpent = Number(curr.amountSpent) || 0
+
+    if (
+      curr.fuelFillType === 'Full Tank' &&
+      prev.fuelFillType === 'Full Tank' &&
+      tripDistance > 0 &&
+      amountSpent > 0
+    ) {
+      return Number((amountSpent / tripDistance).toFixed(2))
+    }
+  }
+
+  // 2. Full Tank spanning across partial top-ups
+  for (let i = list.length - 1; i >= 1; i--) {
+    if (list[i].fuelFillType === 'Full Tank') {
+      let spanSpend = 0
+      for (let k = i; k >= 1; k--) {
+        spanSpend += Number(list[k].amountSpent) || 0
+        if (list[k - 1].fuelFillType === 'Full Tank') {
+          const spanDist =
+            (Number(list[i].odometerKm) || 0) -
+            (Number(list[k - 1].odometerKm) || 0)
+          if (spanDist > 0 && spanSpend > 0) {
+            return Number((spanSpend / spanDist).toFixed(2))
+          }
+        }
+      }
+    }
+  }
+
+  // 3. Fallback: most recent trip ratio
+  for (let i = list.length - 1; i >= 1; i--) {
+    const curr = list[i]
+    const prev = list[i - 1]
+    const currOdo = Number(curr.odometerKm) || 0
+    const prevOdo = Number(prev.odometerKm) || 0
+    const tripDistance = Math.max(0, currOdo - prevOdo)
+    const amountSpent = Number(curr.amountSpent) || 0
+
+    if (tripDistance > 0 && amountSpent > 0) {
+      return Number((amountSpent / tripDistance).toFixed(2))
+    }
+  }
+
+  // 4. Overall fleet fallback across all refills
+  let totalDist = 0
+  let totalSpend = 0
+  for (let i = 1; i < list.length; i++) {
+    const d = Math.max(
+      0,
+      (Number(list[i].odometerKm) || 0) - (Number(list[i - 1].odometerKm) || 0),
+    )
+    totalDist += d
+    totalSpend += Number(list[i].amountSpent) || 0
+  }
+
+  if (totalDist > 0 && totalSpend > 0) {
+    return Number((totalSpend / totalDist).toFixed(2))
+  }
+
+  return 0
+}

@@ -32,6 +32,7 @@ export default function DashboardPage() {
   } = useFleetData()
 
   const [isFuelModalOpen, setIsFuelModalOpen] = useState(false)
+  const [activeMobileWidget, setActiveMobileWidget] = useState('cockpit')
 
   const currentOdo = Number(primaryVehicle?.mileage) || 0
   const dueServiceReminders = useMemo(() => {
@@ -44,6 +45,17 @@ export default function DashboardPage() {
       .filter((r) => r.meta.isDue)
       .sort(sortServiceReminders)
   }, [serviceReminders, currentOdo])
+
+  const dueMaintenanceCount = useMemo(() => {
+    const odoNum = currentOdo
+    return (maintenanceItems || []).filter((item) => {
+      const itemLastOdo = Number(item.lastServiceOdo) || 0
+      const effectiveLastOdo = itemLastOdo > odoNum ? 0 : itemLastOdo
+      const rawPassedKm = Math.max(0, odoNum - effectiveLastOdo)
+      const interval = Math.max(1, Number(item.intervalKm) || 1000)
+      return interval - rawPassedKm <= 0
+    }).length
+  }, [maintenanceItems, currentOdo])
 
   return (
     <div className="space-y-6">
@@ -119,34 +131,90 @@ export default function DashboardPage() {
         onSave={updatePrimaryVehicle}
       />
 
+      {/* Mobile Widget Selector Pills: Streamlines long card stacks into focused widgets on mobile */}
+      <div className="flex lg:hidden items-center gap-1.5 overflow-x-auto rounded-2xl border border-white/10 bg-[#0c1015] p-1.5 text-xs font-bold [scrollbar-width:none]">
+        <button
+          type="button"
+          onClick={() => setActiveMobileWidget('cockpit')}
+          className={`flex-1 min-w-[85px] py-2 px-2.5 text-center rounded-xl transition-all ${
+            activeMobileWidget === 'cockpit'
+              ? 'bg-lime-400 text-zinc-950 shadow-md shadow-lime-400/20'
+              : 'text-zinc-400 hover:text-white hover:bg-white/5'
+          }`}
+        >
+          Cockpit
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveMobileWidget('fuel')}
+          className={`flex-1 min-w-[95px] py-2 px-2.5 text-center rounded-xl transition-all ${
+            activeMobileWidget === 'fuel'
+              ? 'bg-lime-400 text-zinc-950 shadow-md shadow-lime-400/20'
+              : 'text-zinc-400 hover:text-white hover:bg-white/5'
+          }`}
+        >
+          Fuel & Spend
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveMobileWidget('health')}
+          className={`flex-1 min-w-[90px] py-2 px-2.5 text-center rounded-xl transition-all ${
+            activeMobileWidget === 'health'
+              ? 'bg-lime-400 text-zinc-950 shadow-md shadow-lime-400/20'
+              : 'text-zinc-400 hover:text-white hover:bg-white/5'
+          }`}
+        >
+          Health {dueMaintenanceCount > 0 ? `(${dueMaintenanceCount}!)` : ''}
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveMobileWidget('all')}
+          className={`py-2 px-3 text-center rounded-xl transition-all ${
+            activeMobileWidget === 'all'
+              ? 'bg-lime-400 text-zinc-950 shadow-md shadow-lime-400/20'
+              : 'text-zinc-400 hover:text-white hover:bg-white/5'
+          }`}
+        >
+          All
+        </button>
+      </div>
+
       {/* 2. Interactive Odometer Cluster Card with Needle Sweep on Hover & Fuel Refill Sync */}
-      <OdometerClusterCard
-        vehicle={primaryVehicle}
-        latestRefill={latestRefill}
-        fuelRefills={fuelRefills}
-        onLogFuelRefill={addFuelRefill}
-        onOpenFuelModal={() => setIsFuelModalOpen(true)}
-      />
+      <div className={activeMobileWidget === 'cockpit' || activeMobileWidget === 'all' ? 'block' : 'hidden lg:block'}>
+        <OdometerClusterCard
+          vehicle={primaryVehicle}
+          latestRefill={latestRefill}
+          fuelRefills={fuelRefills}
+          onLogFuelRefill={addFuelRefill}
+          onOpenFuelModal={() => setIsFuelModalOpen(true)}
+        />
+      </div>
 
       {/* 3. Monthly Fuel Summary: Current Month vs Last Month Update Comparison */}
-      <MonthlyFuelCard
-        monthlyFuelSummary={monthlyFuelSummary}
-        onOpenAddModal={() => setIsFuelModalOpen(true)}
-      />
+      <div className={activeMobileWidget === 'fuel' || activeMobileWidget === 'all' ? 'block' : 'hidden lg:block'}>
+        <MonthlyFuelCard
+          monthlyFuelSummary={monthlyFuelSummary}
+          onOpenAddModal={() => setIsFuelModalOpen(true)}
+        />
+      </div>
 
-      {/* 4. Important Maintenance Health: 9 wear items compared to Odo with remaining km bars */}
-      <MaintenanceHealthCard
-        items={maintenanceItems}
-        currentOdo={primaryVehicle.mileage}
-        onUpdateItem={updateMaintenanceItem}
-      />
+      {/* 4. Important Maintenance Health: wear items compared to Odo with remaining km bars */}
+      <div className={activeMobileWidget === 'health' || activeMobileWidget === 'all' ? 'block' : 'hidden lg:block'}>
+        <MaintenanceHealthCard
+          items={maintenanceItems}
+          currentOdo={primaryVehicle.mileage}
+          onUpdateItem={updateMaintenanceItem}
+        />
+      </div>
 
       {/* 5. Monthly Distance & Fuel Trend */}
-      <FuelAndMileageChart
-        fuelRefills={fuelRefills}
-        vehicle={primaryVehicle}
-        fallbackData={monthlyTrends}
-      />
+      <div className={activeMobileWidget === 'fuel' || activeMobileWidget === 'all' ? 'block' : 'hidden lg:block'}>
+        <FuelAndMileageChart
+          fuelRefills={fuelRefills}
+          vehicle={primaryVehicle}
+          fallbackData={monthlyTrends}
+        />
+      </div>
 
       {/* Quick Add Fuel Refill Modal */}
       <FuelRefillModal

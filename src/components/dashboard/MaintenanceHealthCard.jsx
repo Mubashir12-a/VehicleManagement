@@ -2,6 +2,8 @@ import {
   Activity,
   ArrowDownUp,
   BatteryCharging,
+  ChevronDown,
+  ChevronUp,
   CircleDot,
   Cog,
   Disc,
@@ -15,6 +17,7 @@ import {
   Wind,
   Zap,
 } from 'lucide-react'
+import { useMemo, useState } from 'react'
 import { useAnimatedNumber } from '../../hooks/useAnimatedNumber'
 
 const ITEM_ICONS = {
@@ -155,11 +158,25 @@ function MaintenanceItemCard({ item, currentOdo }) {
 }
 
 export default function MaintenanceHealthCard({ items = [], currentOdo = 0 }) {
+  const [showAllMobile, setShowAllMobile] = useState(false)
+
+  // Prioritize Overdue and Due Soon items first
+  const sortedItems = useMemo(() => {
+    return [...items].sort((a, b) => {
+      const odoNum = Number(currentOdo) || 0
+      const aPassed = Math.max(0, odoNum - (Number(a.lastServiceOdo) || 0))
+      const aRem = (Number(a.intervalKm) || 1000) - aPassed
+      const bPassed = Math.max(0, odoNum - (Number(b.lastServiceOdo) || 0))
+      const bRem = (Number(b.intervalKm) || 1000) - bPassed
+      return aRem - bRem
+    })
+  }, [items, currentOdo])
+
   return (
-    <section className="rounded-3xl border border-white/10 bg-[#0d1014] p-5 shadow-2xl sm:p-7">
+    <section className="rounded-3xl border border-white/10 bg-[#0d1014] p-4 shadow-2xl sm:p-7">
       <div className="flex flex-col gap-2 border-b border-white/8 pb-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h3 className="text-lg font-extrabold tracking-tight text-white">
+          <h3 className="text-base sm:text-lg font-extrabold tracking-tight text-white">
             Important Maintenance Health
           </h3>
           <p className="mt-0.5 text-xs text-zinc-400">
@@ -167,7 +184,7 @@ export default function MaintenanceHealthCard({ items = [], currentOdo = 0 }) {
             <span className="font-mono font-bold text-lime-300">
               {Number(currentOdo).toLocaleString('en-IN')} km
             </span>
-            ) across all 9 key components.
+            ) across all {items.length} key components.
           </p>
         </div>
 
@@ -176,7 +193,7 @@ export default function MaintenanceHealthCard({ items = [], currentOdo = 0 }) {
             <span className="h-2 w-2 rounded-full bg-lime-400 shadow-[0_0_6px_#a3e635]" /> Good
           </span>
           <span className="inline-flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-amber-400 shadow-[0_0_6px_#fbbf24]" /> Due Soon (≥80%)
+            <span className="h-2 w-2 rounded-full bg-amber-400 shadow-[0_0_6px_#fbbf24]" /> Due Soon
           </span>
           <span className="inline-flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-rose-500 shadow-[0_0_6px_#f43f5e]" /> Overdue
@@ -184,15 +201,45 @@ export default function MaintenanceHealthCard({ items = [], currentOdo = 0 }) {
         </div>
       </div>
 
-      <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {items.map((item) => (
-          <MaintenanceItemCard
-            key={item.itemKey}
-            item={item}
-            currentOdo={currentOdo}
-          />
-        ))}
+      <div className="mt-4 sm:mt-5 grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {sortedItems.map((item, idx) => {
+          // On mobile, hide items past the first 3 unless showAllMobile is true
+          const isHiddenOnMobile = !showAllMobile && idx >= 3
+          return (
+            <div
+              key={item.itemKey}
+              className={isHiddenOnMobile ? 'hidden md:block' : 'block'}
+            >
+              <MaintenanceItemCard
+                item={item}
+                currentOdo={currentOdo}
+              />
+            </div>
+          )
+        })}
       </div>
+
+      {sortedItems.length > 3 && (
+        <div className="mt-4 pt-3 border-t border-white/6 text-center md:hidden">
+          <button
+            type="button"
+            onClick={() => setShowAllMobile(!showAllMobile)}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-bold text-lime-400 transition hover:bg-white/10"
+          >
+            {showAllMobile ? (
+              <>
+                <ChevronUp className="h-3.5 w-3.5" />
+                <span>Show Top Priority Only</span>
+              </>
+            ) : (
+              <>
+                <ChevronDown className="h-3.5 w-3.5" />
+                <span>View All ({sortedItems.length}) Components</span>
+              </>
+            )}
+          </button>
+        </div>
+      )}
     </section>
   )
 }

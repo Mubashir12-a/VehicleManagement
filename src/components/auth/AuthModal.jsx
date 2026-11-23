@@ -5,11 +5,12 @@ import {
   Eye,
   EyeOff,
   Lock,
+  LogIn,
   Mail,
   Phone,
   Shield,
-  Sparkles,
   User,
+  UserPlus,
   X,
 } from 'lucide-react'
 import { useState } from 'react'
@@ -404,7 +405,9 @@ export default function AuthModal() {
               <div className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-950 border-t-transparent" />
             ) : (
               <>
-                <Sparkles className="h-4 w-4" />
+                {authModalTab === 'signin' && <LogIn className="h-4 w-4" />}
+                {authModalTab === 'signup' && <UserPlus className="h-4 w-4" />}
+                {authModalTab === 'forgot' && <Mail className="h-4 w-4" />}
                 <span>
                   {authModalTab === 'signin' && 'Sign In to Garage'}
                   {authModalTab === 'signup' && 'Create Account & Initialize'}

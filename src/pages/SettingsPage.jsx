@@ -21,6 +21,7 @@ import {
   Sparkles,
   Trash2,
   User,
+  UserPlus,
   Zap,
 } from 'lucide-react'
 import { useState } from 'react'
@@ -276,21 +277,21 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2.5">
+              <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-2.5">
                 <button
                   type="button"
                   onClick={() => openAuthModal('signin')}
-                  className="inline-flex items-center gap-2 rounded-xl border border-lime-400/40 bg-lime-400/10 px-4 py-2.5 text-xs font-bold text-lime-300 transition-all hover:bg-lime-400 hover:text-zinc-950"
+                  className="inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl border border-lime-400/40 bg-lime-400/10 px-3.5 sm:px-4 py-2.5 text-xs font-bold text-lime-300 transition-all hover:bg-lime-400 hover:text-zinc-950"
                 >
-                  <LogIn className="h-4 w-4" />
+                  <LogIn className="h-4 w-4 shrink-0" />
                   <span>Sign In</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => openAuthModal('signup')}
-                  className="inline-flex items-center gap-2 rounded-xl bg-lime-400 px-4 py-2.5 text-xs font-black text-zinc-950 transition-all hover:bg-lime-300 shadow-md shadow-lime-400/20"
+                  className="inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl bg-lime-400 px-3.5 sm:px-4 py-2.5 text-xs font-black text-zinc-950 transition-all hover:bg-lime-300 shadow-md shadow-lime-400/20"
                 >
-                  <Sparkles className="h-4 w-4" />
+                  <UserPlus className="h-4 w-4 shrink-0" />
                   <span>Create Account</span>
                 </button>
               </div>

@@ -2,7 +2,10 @@ import { Check, Fuel, Plus, Sparkles, Zap } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAnimatedNumber } from '../../hooks/useAnimatedNumber'
-import { computeLatestFuelMileage } from '../../services/fleetService'
+import {
+  computeLatestCostPerKm,
+  computeLatestFuelMileage,
+} from '../../services/fleetService'
 import { formatDisplayDate } from '../../utils/dateFormatter'
 
 function getTodayString() {
@@ -120,6 +123,11 @@ export default function OdometerClusterCard({
     [fuelRefills],
   )
 
+  const latestCostPerKm = useMemo(
+    () => computeLatestCostPerKm(fuelRefills),
+    [fuelRefills],
+  )
+
   const [formData, setFormData] = useState(() => ({
     odometerKm: vehicle?.mileage || '',
     liters: isCar ? 25 : 4,
@@ -203,7 +211,7 @@ export default function OdometerClusterCard({
   }
 
   return (
-    <section className="rounded-3xl border border-white/10 bg-[#0d1014] p-5 shadow-2xl sm:p-7">
+    <section className="rounded-3xl border border-white/10 bg-[#0d1014] p-4 shadow-2xl sm:p-7">
       {/* Header with Title and Action Button */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
@@ -238,17 +246,17 @@ export default function OdometerClusterCard({
       <div
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        className="group relative mt-5 overflow-hidden rounded-2xl border border-white/12 bg-linear-to-b from-[#11161d] via-[#090c0f] to-[#040608] p-4 shadow-[inset_0_2px_12px_rgba(0,0,0,0.8)] transition-all duration-300 hover:border-lime-400/40 hover:shadow-[0_0_36px_rgba(163,230,53,0.14)] sm:p-6"
+        className="group relative mt-5 overflow-hidden rounded-2xl border border-white/12 bg-linear-to-b from-[#11161d] via-[#090c0f] to-[#040608] p-3.5 shadow-[inset_0_2px_12px_rgba(0,0,0,0.8)] transition-all duration-300 hover:border-lime-400/40 hover:shadow-[0_0_36px_rgba(163,230,53,0.14)] sm:p-6"
       >
         {/* Subtle glass reflection & carbon grid */}
         <div className="carbon-dots pointer-events-none absolute inset-0 opacity-20" />
         <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-linear-to-b from-white/4 to-transparent" />
 
         {/* 1. TOP TELLTALE STATUS BAR */}
-        <div className="pointer-events-none relative z-10 flex items-center justify-between border-b border-white/8 pb-3">
-          <div className="flex items-center gap-3">
+        <div className="pointer-events-none relative z-10 flex items-center justify-between border-b border-white/8 pb-2.5 sm:pb-3">
+          <div className="flex items-center gap-1.5 sm:gap-3">
             <span
-              className={`flex h-6 w-7 items-center justify-center rounded-md border text-xs font-bold transition-all duration-300 ${
+              className={`flex h-6 w-6 sm:w-7 items-center justify-center rounded-md border text-[11px] sm:text-xs font-bold transition-all duration-300 ${
                 isHovered
                   ? 'border-emerald-400/50 bg-emerald-400/20 text-emerald-300 shadow-[0_0_10px_rgba(52,211,153,0.4)]'
                   : 'border-white/10 bg-white/5 text-zinc-600'
@@ -258,7 +266,7 @@ export default function OdometerClusterCard({
             </span>
 
             <span
-              className={`flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-black tracking-wider transition-all duration-300 ${
+              className={`flex items-center gap-1 sm:gap-1.5 rounded-full border px-2 sm:px-2.5 py-0.5 text-[10px] sm:text-[11px] font-black tracking-wider transition-all duration-300 ${
                 currentGear === 'N'
                   ? 'border-lime-400/40 bg-lime-400/15 text-lime-300 shadow-[0_0_10px_rgba(163,230,53,0.35)]'
                   : 'border-white/10 bg-white/5 text-zinc-500'
@@ -273,7 +281,7 @@ export default function OdometerClusterCard({
             </span>
 
             <span
-              className={`rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase transition-all duration-300 ${
+              className={`rounded-md border px-1.5 sm:px-2 py-0.5 text-[9px] sm:text-[10px] font-bold uppercase transition-all duration-300 ${
                 isHovered
                   ? 'border-sky-400/50 bg-sky-400/20 text-sky-300 shadow-[0_0_10px_rgba(56,189,248,0.4)]'
                   : 'border-white/10 bg-white/5 text-zinc-600'
@@ -283,9 +291,9 @@ export default function OdometerClusterCard({
             </span>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-3">
             <span
-              className={`rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase transition-all duration-300 ${
+              className={`rounded-md border px-1.5 sm:px-2 py-0.5 text-[9px] sm:text-[10px] font-bold uppercase transition-all duration-300 ${
                 isHovered
                   ? 'border-amber-400/50 bg-amber-400/20 text-amber-300 shadow-[0_0_10px_rgba(251,191,36,0.35)]'
                   : 'border-white/10 bg-white/5 text-zinc-600'
@@ -294,12 +302,12 @@ export default function OdometerClusterCard({
               ABS
             </span>
 
-            <span className="font-mono text-xs font-bold text-zinc-400">
+            <span className="font-mono text-[11px] sm:text-xs font-bold text-zinc-400">
               {vehicle.engineCc} CC
             </span>
 
             <span
-              className={`flex h-6 w-7 items-center justify-center rounded-md border text-xs font-bold transition-all duration-300 ${
+              className={`flex h-6 w-6 sm:w-7 items-center justify-center rounded-md border text-[11px] sm:text-xs font-bold transition-all duration-300 ${
                 isHovered
                   ? 'border-emerald-400/50 bg-emerald-400/20 text-emerald-300 shadow-[0_0_10px_rgba(52,211,153,0.4)]'
                   : 'border-white/10 bg-white/5 text-zinc-600'
@@ -362,27 +370,29 @@ export default function OdometerClusterCard({
         </div>
 
         {/* 3. CENTER TELEMETRY & ROLLING ODOMETER TUMBLER */}
-        <div className="pointer-events-none relative z-10 mt-5 grid grid-cols-1 items-center gap-6 lg:grid-cols-12">
+        <div className="pointer-events-none relative z-10 mt-4 sm:mt-5 grid grid-cols-1 items-center gap-4 sm:gap-6 lg:grid-cols-12">
           {/* Left: Speedometer with Increasing Animation & 0-60 Green, 60-120 Orange, 120+ Red */}
-          <div className="flex items-baseline gap-2.5 lg:col-span-5">
-            <span
-              className={`font-mono text-5xl font-black italic tracking-tighter tabular-nums transition-colors duration-150 sm:text-6xl ${speedColor.text} ${speedColor.dropGlow}`}
-            >
-              {animatedSpeed}
-            </span>
-            <div className="leading-tight">
+          <div className="flex items-center justify-between gap-2.5 lg:col-span-5 lg:justify-start">
+            <div className="flex items-baseline gap-2">
               <span
-                className={`block font-sans text-xs font-black uppercase tracking-wider transition-colors duration-150 ${speedColor.text}`}
+                className={`font-mono text-5xl font-black italic tracking-tighter tabular-nums transition-colors duration-150 sm:text-6xl ${speedColor.text} ${speedColor.dropGlow}`}
               >
-                KM / H
+                {animatedSpeed}
               </span>
-              <span className="block text-[10px] font-semibold text-zinc-500">
-                SPEED
-              </span>
+              <div className="leading-tight">
+                <span
+                  className={`block font-sans text-xs font-black uppercase tracking-wider transition-colors duration-150 ${speedColor.text}`}
+                >
+                  KM / H
+                </span>
+                <span className="block text-[10px] font-semibold text-zinc-500">
+                  SPEED
+                </span>
+              </div>
             </div>
 
             {/* Gear Indicator Box */}
-            <div className="ml-auto rounded-xl border border-white/10 bg-black/60 px-3 py-1.5 text-center shadow-inner">
+            <div className="rounded-xl border border-white/10 bg-black/60 px-3 py-1.5 text-center shadow-inner">
               <span className="block text-[9px] font-bold uppercase tracking-widest text-zinc-500">
                 GEAR
               </span>
@@ -397,19 +407,19 @@ export default function OdometerClusterCard({
           </div>
 
           {/* Right: Rolling Odometer Tumbler (All 6 Digits Slide Vertically) */}
-          <div className="rounded-2xl border border-white/10 bg-[#07090c] p-4 shadow-inner lg:col-span-7">
+          <div className="rounded-2xl border border-white/10 bg-[#07090c] p-3 sm:p-4 shadow-inner lg:col-span-7">
             <div className="flex items-center justify-between">
-              <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-lime-400">
-                <Sparkles className="h-3 w-3" />
+              <span className="flex items-center gap-1.5 text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-lime-400">
+                <Sparkles className="h-3 w-3 shrink-0" />
                 ODOMETER (TOTAL DISTANCE)
               </span>
-              <span className="rounded bg-white/5 px-1.5 py-0.5 font-mono text-[10px] font-bold text-zinc-400">
+              <span className="rounded bg-white/5 px-1.5 py-0.5 font-mono text-[9px] sm:text-[10px] font-bold text-zinc-400">
                 KM
               </span>
             </div>
 
             {/* Tumbler Columns */}
-            <div className="mt-2.5 flex items-center justify-between gap-1.5 sm:gap-2">
+            <div className="mt-2.5 flex items-center justify-between gap-1 sm:gap-1.5 md:gap-2">
               {digits.map((digit, index) => (
                 <RollingDigitTumbler
                   key={index}
@@ -419,13 +429,34 @@ export default function OdometerClusterCard({
               ))}
             </div>
 
-            <div className="mt-2.5 flex items-center justify-between text-[11px] text-zinc-400">
-              <span className="font-mono">
-                TRIP A: <strong className="text-zinc-200">48.2 km</strong>
-              </span>
-              <span className="font-mono">
-                RANGE: <strong className="text-lime-300">~240 km</strong>
-              </span>
+            {/* Mileage & Per Km Expenses: Responsive 2-Col Grid on Mobile, Inline Row on Desktop */}
+            <div className="mt-3 grid grid-cols-2 gap-2 border-t border-white/6 pt-2.5 sm:flex sm:items-center sm:justify-between sm:border-0 sm:pt-0">
+              <Link
+                to="/fuel-history"
+                className="flex flex-col rounded-xl border border-white/8 bg-white/[0.02] p-2 transition-colors hover:border-lime-400/30 hover:bg-white/[0.05] sm:flex-row sm:items-center sm:gap-1.5 sm:border-0 sm:bg-transparent sm:p-0"
+                title="Latest computed fuel mileage"
+              >
+                <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-zinc-500 sm:text-[11px] sm:font-normal sm:text-zinc-400">
+                  MILEAGE:
+                </span>
+                <strong className="font-mono text-xs font-black text-zinc-200 sm:text-[11px] sm:font-bold">
+                  {latestMileage > 0 ? `${latestMileage} km/L` : '—'}
+                </strong>
+              </Link>
+
+              <Link
+                to="/fuel-history"
+                className="flex flex-col rounded-xl border border-white/8 bg-white/[0.02] p-2 transition-colors hover:border-lime-400/30 hover:bg-white/[0.05] sm:flex-row sm:items-center sm:gap-1.5 sm:border-0 sm:bg-transparent sm:p-0 sm:justify-end text-left sm:text-right"
+                title="Fuel running cost per kilometer"
+              >
+                <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-zinc-500 sm:text-[11px] sm:font-normal sm:text-zinc-400">
+                  <span className="sm:hidden">EXPENSES:</span>
+                  <span className="hidden sm:inline">PER KM EXPENSES:</span>
+                </span>
+                <strong className="font-mono text-xs font-black text-lime-300 sm:text-[11px] sm:font-bold">
+                  {latestCostPerKm > 0 ? `₹${latestCostPerKm}/km` : '—'}
+                </strong>
+              </Link>
             </div>
           </div>
         </div>

@@ -8,8 +8,8 @@ import {
   LogOut,
   Menu,
   Settings,
-  Sparkles,
   User,
+  UserPlus,
   Wrench,
   X,
 } from 'lucide-react'
@@ -354,11 +354,11 @@ export default function Topbar({ onOpenMenu }) {
               <ChevronDown className="h-3.5 w-3.5 text-zinc-400 hidden sm:block" />
             </button>
           ) : (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2">
               <button
                 type="button"
                 onClick={() => openAuthModal('signin')}
-                className="flex items-center gap-1.5 rounded-xl border border-lime-400/40 bg-lime-400/10 px-3 py-1.5 text-xs font-bold text-lime-300 hover:bg-lime-400 hover:text-zinc-950 transition-all shadow-sm shadow-lime-400/20"
+                className="flex items-center gap-1.5 rounded-xl border border-lime-400/40 bg-lime-400/10 px-2.5 sm:px-3 py-1.5 text-xs font-bold text-lime-300 hover:bg-lime-400 hover:text-zinc-950 transition-all shadow-sm shadow-lime-400/20"
               >
                 <LogIn className="h-3.5 w-3.5" />
                 <span>Sign In</span>
@@ -366,10 +366,10 @@ export default function Topbar({ onOpenMenu }) {
               <button
                 type="button"
                 onClick={() => openAuthModal('signup')}
-                className="hidden sm:flex items-center gap-1 rounded-xl bg-lime-400 px-3 py-1.5 text-xs font-bold text-zinc-950 hover:bg-lime-300 transition-all"
+                className="flex items-center gap-1.5 rounded-xl bg-lime-400 px-2.5 sm:px-3 py-1.5 text-xs font-bold text-zinc-950 hover:bg-lime-300 transition-all shadow-sm shadow-lime-400/20"
               >
-                <Sparkles className="h-3.5 w-3.5" />
-                <span>Register</span>
+                <UserPlus className="h-3.5 w-3.5" />
+                <span className="hidden xs:inline sm:inline">Register</span>
               </button>
             </div>
           )}

@@ -206,28 +206,17 @@ export default function VehicleHeroCard({
                   </button>
                 </div>
 
-                {/* Status Pill (matches reference pill aesthetic) */}
-                <div className="mt-5 flex flex-wrap items-center gap-2.5">
-                  <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wider text-zinc-300">
+                {/* Status Pill (matches reference pill aesthetic - streamlined on mobile) */}
+                <div className="mt-3 sm:mt-5 flex flex-wrap items-center gap-2 sm:gap-2.5">
+                  <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 sm:px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wider text-zinc-300">
                     <span className="h-2 w-2 rounded-full bg-lime-400 shadow-[0_0_8px_#a3e635]" />
                     {vehicle.fuelType || 'Petrol (E10)'} · {Number(vehicle.engineCc).toLocaleString()} CC
-                  </span>
-
-                  <span className="rounded-full border border-lime-400/20 bg-lime-400/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-lime-300">
-                    {vehicle.category}
-                    {vehicle.category === 'Two Wheeler'
-                      ? ` · ${vehicle.subType}`
-                      : ''}
-                  </span>
-
-                  <span className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-300">
-                    {animatedSpeed} KM/H
                   </span>
 
                   {latestMileage > 0 && (
                     <Link
                       to="/fuel-history"
-                      className="inline-flex items-center gap-1.5 rounded-full border border-lime-400/30 bg-lime-400/10 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-lime-300 shadow-[0_0_12px_rgba(163,230,53,0.15)] transition-colors hover:bg-lime-400/20"
+                      className="inline-flex items-center gap-1.5 rounded-full border border-lime-400/30 bg-lime-400/10 px-3 sm:px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-wider text-lime-300 shadow-[0_0_12px_rgba(163,230,53,0.15)] transition-colors hover:bg-lime-400/20"
                       title="Latest computed fuel mileage"
                     >
                       <Zap className="h-3 w-3 text-lime-400" />
@@ -235,15 +224,26 @@ export default function VehicleHeroCard({
                     </Link>
                   )}
 
+                  <span className="hidden sm:inline-flex rounded-full border border-lime-400/20 bg-lime-400/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-lime-300">
+                    {vehicle.category}
+                    {vehicle.category === 'Two Wheeler'
+                      ? ` · ${vehicle.subType}`
+                      : ''}
+                  </span>
+
+                  <span className="hidden sm:inline-flex rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-300">
+                    {animatedSpeed} KM/H
+                  </span>
+
                   {vehicle.purchaseDate && (
-                    <span className="inline-flex items-center gap-1.5 rounded-full border border-lime-400/25 bg-lime-400/10 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-lime-300 shadow-[0_0_12px_rgba(163,230,53,0.12)]">
+                    <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-lime-400/25 bg-lime-400/10 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-lime-300 shadow-[0_0_12px_rgba(163,230,53,0.12)]">
                       <Calendar className="h-3 w-3 text-lime-400" />
                       Purchased: {formatDisplayDate(vehicle.purchaseDate)}
                     </span>
                   )}
 
                   {Number(vehicle.exShowroomPrice) > 0 && (
-                    <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-zinc-300">
+                    <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-zinc-300">
                       Ex-Showroom: ₹{Number(vehicle.exShowroomPrice).toLocaleString('en-IN')}
                     </span>
                   )}
