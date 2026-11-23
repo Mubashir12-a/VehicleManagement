@@ -148,7 +148,7 @@ export function AuthProvider({ children }) {
     async (email, password) => {
       if (!isSupabaseConfigured || !supabase) {
         throw new Error(
-          'Supabase is not configured. Please add your credentials in .env.local',
+          'Supabase is not configured. Please add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your Cloudflare Environment Variables or .env.local',
         )
       }
 
@@ -173,7 +173,7 @@ export function AuthProvider({ children }) {
     async (email, password, metadata = {}) => {
       if (!isSupabaseConfigured || !supabase) {
         throw new Error(
-          'Supabase is not configured. Please add your credentials in .env.local',
+          'Supabase is not configured. Please add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your Cloudflare Environment Variables or .env.local',
         )
       }
 
