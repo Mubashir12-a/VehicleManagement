@@ -41,6 +41,7 @@ import {
   deleteVehicleRecord,
   deleteVehicleRepairRecord,
   fetchFleetData,
+  resetAllDataRecord,
   updateFuelRefillRecord,
   updateMaintenanceHealthItem,
   updatePrimaryVehicleRecord,
@@ -74,6 +75,7 @@ const defaultFallback = {
   activeVehicleCode: defaultVehicle.id,
   latestRefill: defaultFuelRefills[0] || null,
   refresh: () => {},
+  resetAllData: async () => {},
   switchActiveVehicle: async () => {},
   addVehicle: async () => {},
   deleteVehicle: async () => {},
@@ -266,6 +268,18 @@ function useProvideFleetData() {
     },
     [state.vehicles, user],
   )
+
+  const resetAllData = useCallback(async () => {
+    setState((prev) => ({ ...prev, loading: true }))
+    const result = await resetAllDataRecord(user)
+    setActiveVehicleCode(result.vehicleCode)
+    const refreshed = await fetchFleetData(user, result.vehicleCode)
+    setState({
+      loading: false,
+      ...refreshed,
+    })
+    return result
+  }, [user])
 
   const updatePrimaryVehicle = useCallback(
     async (updates) => {
@@ -637,6 +651,7 @@ function useProvideFleetData() {
     activeVehicleCode,
     latestRefill,
     refresh,
+    resetAllData,
     switchActiveVehicle,
     addVehicle,
     deleteVehicle,

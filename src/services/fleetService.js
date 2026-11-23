@@ -1046,6 +1046,104 @@ export async function deleteVehicleRecord(vehicle) {
   return { success: true }
 }
 
+export async function resetAllDataRecord(user) {
+  if (isSupabaseConfigured && supabase && user?.id) {
+    // 1. Delete all user vehicles (which cascades and deletes all child records in PostgreSQL)
+    const { error: delError } = await supabase
+      .from('vehicles')
+      .delete()
+      .eq('user_id', user.id)
+
+    if (delError) {
+      console.warn('Error deleting user vehicles during reset:', delError.message)
+    }
+
+    // 2. Also ensure any user-specific records in child tables are clean
+    await Promise.allSettled([
+      supabase.from('fuel_refills').delete().eq('user_id', user.id),
+      supabase.from('maintenance_items').delete().eq('user_id', user.id),
+      supabase.from('service_reminders').delete().eq('user_id', user.id),
+      supabase.from('component_service_logs').delete().eq('user_id', user.id),
+      supabase.from('vehicle_repairs').delete().eq('user_id', user.id),
+      supabase.from('vehicle_documents').delete().eq('user_id', user.id),
+      supabase.from('vehicle_modifications').delete().eq('user_id', user.id),
+    ])
+
+    // 3. Provision a fresh, clean default vehicle profile
+    const newVehicleCode = `VH-${user.id.slice(0, 4).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`
+    const payload = {
+      user_id: user.id,
+      vehicle_code: newVehicleCode,
+      name: 'Enter Vehicle Name',
+      brand: 'None',
+      model: 'None',
+      category: 'Two Wheeler',
+      sub_type: 'Bike',
+      engine_cc: 0,
+      top_speed: 0,
+      fuel_type: 'None',
+      plate: 'None',
+      driver: 'None',
+      status: 'Active',
+      mileage: 0,
+      fuel_level: 0,
+      purchase_date: null,
+      ex_showroom_price: 0,
+    }
+
+    const { error: createError } = await supabase
+      .from('vehicles')
+      .insert([payload])
+      .select('*')
+      .single()
+
+    if (createError) {
+      console.warn('Error creating default vehicle after reset:', createError.message)
+    }
+
+    // 4. Provision standard 18 starter maintenance items
+    const starterItems = defaultMaintenanceItems.map((item, idx) => ({
+      user_id: user.id,
+      vehicle_code: newVehicleCode,
+      item_key: item.itemKey || item.key,
+      label: item.label,
+      interval_km: item.intervalKm || 1000,
+      last_service_odo: 0,
+      sort_order: idx + 1,
+    }))
+
+    await supabase.from('maintenance_items').insert(starterItems)
+
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.removeItem('mkd_active_vehicle_code')
+        localStorage.setItem('mkd_active_vehicle_code', newVehicleCode)
+      } catch {
+        // ignore
+      }
+    }
+
+    return {
+      success: true,
+      vehicleCode: newVehicleCode,
+    }
+  }
+
+  // Guest / Offline fallback: clean all local storage
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.clear()
+    } catch {
+      // ignore
+    }
+  }
+
+  return {
+    success: true,
+    vehicleCode: defaultVehicle.id,
+  }
+}
+
 function normalizeRefillPayload(refillInput) {
   const odometerKm = Math.max(0, Math.round(Number(refillInput.odometerKm) || 0))
   let liters = Math.max(0, Number(refillInput.liters) || 0)

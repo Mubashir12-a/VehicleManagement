@@ -1,4 +1,5 @@
 import {
+  AlertTriangle,
   BookOpen,
   Car,
   Check,
@@ -25,6 +26,7 @@ import {
 import { useState } from 'react'
 import PageHeader from '../components/common/PageHeader'
 import AddVehicleModal from '../components/settings/AddVehicleModal'
+import ResetDataModal from '../components/settings/ResetDataModal'
 import VehicleReportModal from '../components/settings/VehicleReportModal'
 import { useAuth } from '../context/AuthContextCore'
 import { useFleetData } from '../hooks/useFleetData'
@@ -70,6 +72,7 @@ export default function SettingsPage() {
     primaryVehicle,
     switchActiveVehicle,
     deleteVehicle,
+    resetAllData,
     fuelRefills = [],
     maintenanceItems = [],
     serviceReminders = [],
@@ -93,7 +96,9 @@ export default function SettingsPage() {
   const [cacheCleared, setCacheCleared] = useState(false)
   const [isReportModalOpen, setIsReportModalOpen] = useState(false)
   const [isAddVehicleModalOpen, setIsAddVehicleModalOpen] = useState(false)
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false)
   const [switchFeedback, setSwitchFeedback] = useState('')
+  const [resetFeedback, setResetFeedback] = useState('')
 
   const handleSwitchVehicle = async (vehicleId) => {
     try {
@@ -182,6 +187,13 @@ export default function SettingsPage() {
         title="Garage Settings"
         description="Application preferences, telemetry units, and garage data management."
       />
+
+      {resetFeedback && (
+        <div className="flex items-center gap-2.5 rounded-2xl border border-rose-500/40 bg-rose-500/10 p-4 text-xs font-semibold text-rose-300 animate-in fade-in">
+          <AlertTriangle className="h-4 w-4 shrink-0 text-rose-400" />
+          <span>{resetFeedback}</span>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* User Driver Profile & Cloud Account Card */}
@@ -626,6 +638,39 @@ export default function SettingsPage() {
           </div>
         </section>
 
+        {/* Danger Zone: Permanent Profile Reset & Delete All Data */}
+        <section className="rounded-2xl border border-rose-500/30 bg-[#12080a] p-6 shadow-xl lg:col-span-2 space-y-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3.5">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-rose-500/15 text-rose-400 border border-rose-500/40 shadow-lg shadow-rose-500/10">
+                <AlertTriangle className="h-6 w-6" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base font-black text-white">
+                    Danger Zone · Reset Profile & Delete All Data
+                  </h3>
+                  <span className="rounded-full bg-rose-500/20 px-2 py-0.5 text-[10px] font-bold text-rose-300 border border-rose-500/40">
+                    Permanent & Irreversible
+                  </span>
+                </div>
+                <p className="mt-0.5 text-xs text-zinc-400">
+                  Permanently delete all vehicle profiles, telemetry, fuel records, service history, and uploaded documents, resetting your garage to a pristine initial state.
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsResetModalOpen(true)}
+              className="inline-flex items-center gap-2 rounded-xl border border-rose-500/40 bg-rose-500/15 px-4 py-2.5 text-xs font-bold text-rose-300 transition-all hover:bg-rose-600 hover:text-white shadow-md shadow-rose-900/30 self-start sm:self-auto shrink-0"
+            >
+              <Trash2 className="h-4 w-4" />
+              <span>Reset & Delete All Data</span>
+            </button>
+          </div>
+        </section>
+
         {/* System & Garage Profile Overview */}
         <section className="rounded-2xl border border-white/10 bg-[#0d1014] p-6 shadow-xl lg:col-span-2">
           <div className="flex items-center gap-3">
@@ -806,6 +851,19 @@ export default function SettingsPage() {
             `New vehicle profile "${newVehicle.name}" registered and activated!`,
           )
           setTimeout(() => setSwitchFeedback(''), 3500)
+        }}
+      />
+
+      {/* Permanently Reset & Delete All Data Modal */}
+      <ResetDataModal
+        isOpen={isResetModalOpen}
+        onClose={() => setIsResetModalOpen(false)}
+        onResetComplete={async () => {
+          await resetAllData()
+          setResetFeedback(
+            'All garage data has been permanently deleted. Your profile has been reset to a clean default state.',
+          )
+          setTimeout(() => setResetFeedback(''), 6000)
         }}
       />
     </div>
