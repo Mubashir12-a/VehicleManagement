@@ -18,6 +18,8 @@ export const AuthContext = createContext({
   signUpWithEmail: async () => {},
   signOut: async () => {},
   resetPassword: async () => {},
+  updatePassword: async () => {},
+  resendVerificationEmail: async () => {},
   updateProfile: async () => {},
 })
 

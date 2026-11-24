@@ -189,6 +189,41 @@ function useProvideFleetData() {
     }
   }, [user, activeVehicleCode])
 
+  // Sync state to localStorage for Guest / Offline Mode
+  useEffect(() => {
+    if (!user && state.vehicles && state.vehicles.length > 0 && typeof window !== 'undefined') {
+      try {
+        const payload = {
+          vehicles: state.vehicles,
+          fuelRefills: state.fuelRefills,
+          maintenanceItems: state.maintenanceItems,
+          componentServiceLogs: state.componentServiceLogs,
+          vehicleRepairs: state.vehicleRepairs,
+          vehicleDocuments: state.vehicleDocuments,
+          serviceReminders: state.serviceReminders,
+          vehicleModifications: state.vehicleModifications,
+          monthlyTrends: state.monthlyTrends,
+          maintenance: state.maintenance,
+        }
+        localStorage.setItem('mkd_guest_fleet_data', JSON.stringify(payload))
+      } catch {
+        // ignore
+      }
+    }
+  }, [
+    user,
+    state.vehicles,
+    state.fuelRefills,
+    state.maintenanceItems,
+    state.componentServiceLogs,
+    state.vehicleRepairs,
+    state.vehicleDocuments,
+    state.serviceReminders,
+    state.vehicleModifications,
+    state.monthlyTrends,
+    state.maintenance,
+  ])
+
   const primaryVehicle =
     (state.vehicles || []).find((v) => v.id === activeVehicleCode) ||
     state.vehicles?.[0] ||
@@ -271,14 +306,27 @@ function useProvideFleetData() {
 
   const resetAllData = useCallback(async () => {
     setState((prev) => ({ ...prev, loading: true }))
-    const result = await resetAllDataRecord(user)
-    setActiveVehicleCode(result.vehicleCode)
-    const refreshed = await fetchFleetData(user, result.vehicleCode)
-    setState({
-      loading: false,
-      ...refreshed,
-    })
-    return result
+    try {
+      const result = await resetAllDataRecord(user)
+      if (typeof window !== 'undefined' && result.vehicleCode) {
+        try {
+          localStorage.setItem('mkd_active_vehicle_code', result.vehicleCode)
+        } catch {
+          // ignore
+        }
+      }
+      setActiveVehicleCode(result.vehicleCode)
+      const refreshed = await fetchFleetData(user, result.vehicleCode)
+      setState({
+        loading: false,
+        ...refreshed,
+      })
+      return result
+    } catch (err) {
+      console.error('Error during data reset:', err)
+      setState((prev) => ({ ...prev, loading: false }))
+      throw err
+    }
   }, [user])
 
   const updatePrimaryVehicle = useCallback(

@@ -129,6 +129,11 @@ export function AuthProvider({ children }) {
       const currentUser = newSession?.user ?? null
       setUser(currentUser)
 
+      if (event === 'PASSWORD_RECOVERY') {
+        setAuthModalTab('update-password')
+        setIsAuthModalOpen(true)
+      }
+
       if (currentUser) {
         await loadProfile(currentUser)
       } else {
@@ -266,9 +271,34 @@ export function AuthProvider({ children }) {
     const { data, error } = await supabase.auth.resetPasswordForEmail(
       email.trim(),
       {
-        redirectTo: window.location.origin,
+        redirectTo: `${window.location.origin}/`,
       },
     )
+    if (error) throw error
+    return data
+  }, [])
+
+  // Update password (for authenticated user or password recovery)
+  const updatePassword = useCallback(async (newPassword) => {
+    if (!isSupabaseConfigured || !supabase) {
+      throw new Error('Supabase is not configured.')
+    }
+    const { data, error } = await supabase.auth.updateUser({
+      password: newPassword,
+    })
+    if (error) throw error
+    return data
+  }, [])
+
+  // Resend verification email
+  const resendVerificationEmail = useCallback(async (targetEmail) => {
+    if (!isSupabaseConfigured || !supabase) {
+      throw new Error('Supabase is not configured.')
+    }
+    const { data, error } = await supabase.auth.resend({
+      type: 'signup',
+      email: targetEmail.trim(),
+    })
     if (error) throw error
     return data
   }, [])
@@ -316,6 +346,8 @@ export function AuthProvider({ children }) {
       signUpWithEmail,
       signOut,
       resetPassword,
+      updatePassword,
+      resendVerificationEmail,
       updateProfile,
     }),
     [
@@ -334,6 +366,8 @@ export function AuthProvider({ children }) {
       signUpWithEmail,
       signOut,
       resetPassword,
+      updatePassword,
+      resendVerificationEmail,
       updateProfile,
     ],
   )

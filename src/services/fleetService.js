@@ -513,18 +513,80 @@ async function getEffectiveUserId(vehicle = null) {
   }
 }
 
-export async function fetchFleetData(activeUser = null, targetVehicleCode = null) {
+export function getGuestFleetData(targetVehicleCode = null) {
   const storedCode =
     typeof window !== 'undefined'
       ? localStorage.getItem('mkd_active_vehicle_code')
       : null
   const effectiveFallbackCode = targetVehicleCode || storedCode
+
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = localStorage.getItem('mkd_guest_fleet_data')
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        const vehiclesList =
+          parsed.vehicles && parsed.vehicles.length > 0 ? parsed.vehicles : []
+        const primary =
+          vehiclesList.find((v) => v.id === effectiveFallbackCode) ||
+          vehiclesList[0] ||
+          defaultVehicle
+
+        const fuelRefills = parsed.fuelRefills || []
+        const maintenanceItems = parsed.maintenanceItems || []
+        const componentServiceLogs = parsed.componentServiceLogs || []
+        const vehicleRepairs = parsed.vehicleRepairs || []
+        const vehicleDocuments = parsed.vehicleDocuments || []
+        const serviceReminders = parsed.serviceReminders || []
+        const vehicleModifications = parsed.vehicleModifications || []
+        const monthlyTrends = parsed.monthlyTrends || []
+        const maintenance = parsed.maintenance || []
+
+        const analytics = computeFleetAnalytics(
+          vehiclesList,
+          monthlyTrends,
+          fuelRefills,
+          maintenance,
+          componentServiceLogs,
+          vehicleRepairs,
+          vehicleDocuments,
+          serviceReminders,
+          vehicleModifications,
+        )
+
+        return {
+          source: 'local',
+          needsSchema: false,
+          needsSchemaUpgrade: false,
+          vehicles: vehiclesList,
+          maintenance,
+          monthlyTrends,
+          fuelRefills,
+          maintenanceItems,
+          componentServiceLogs,
+          vehicleRepairs,
+          vehicleDocuments,
+          serviceReminders,
+          vehicleModifications,
+          ...analytics,
+          monthlyFuelSummary: computeMonthlyFuelSummary(fuelRefills),
+          statusData: mockStatusData,
+          categoryData: mockCategoryData,
+          primaryVehicle: primary,
+          error: null,
+        }
+      }
+    } catch {
+      // fallback to mock
+    }
+  }
+
   const fallbackPrimary =
     mockVehicles.find((v) => v.id === effectiveFallbackCode) ||
     mockVehicles[0] ||
     defaultVehicle
 
-  const fallbackPayload = {
+  return {
     source: 'mock',
     needsSchema: false,
     needsSchemaUpgrade: false,
@@ -555,9 +617,11 @@ export async function fetchFleetData(activeUser = null, targetVehicleCode = null
     primaryVehicle: fallbackPrimary,
     error: null,
   }
+}
 
+export async function fetchFleetData(activeUser = null, targetVehicleCode = null) {
   if (!isSupabaseConfigured || !supabase) {
-    return fallbackPayload
+    return getGuestFleetData(targetVehicleCode)
   }
 
   // Check active user
@@ -571,9 +635,9 @@ export async function fetchFleetData(activeUser = null, targetVehicleCode = null
     }
   }
 
-  // If no authenticated user, return guest demo fallback cleanly
+  // If no authenticated user, return guest local/demo fallback cleanly
   if (!user) {
-    return fallbackPayload
+    return getGuestFleetData(targetVehicleCode)
   }
 
   try {
@@ -592,10 +656,9 @@ export async function fetchFleetData(activeUser = null, targetVehicleCode = null
       supabase
         .from('vehicles')
         .select(
-          'id, user_id, vehicle_code, name, brand, model, category, sub_type, engine_cc, top_speed, fuel_type, purchase_date, ex_showroom_price, plate, driver, status, mileage, fuel_level, last_service, next_service',
+          'id, user_id, vehicle_code, name, brand, model, category, sub_type, engine_cc, top_speed, fuel_type, purchase_date, ex_showroom_price, plate, driver, status, mileage, fuel_level, last_service, next_service, created_at',
         )
-        .order('created_at', { ascending: true })
-        .limit(1),
+        .order('created_at', { ascending: true }),
       supabase
         .from('maintenance_logs')
         .select('*')
@@ -679,17 +742,19 @@ export async function fetchFleetData(activeUser = null, targetVehicleCode = null
         model: user.user_metadata?.vehicle_model || 'None',
         category: 'Two Wheeler',
         sub_type: 'Bike',
-        engine_cc: 0,
-        top_speed: 0,
-        fuel_type: 'None',
+        type: 'Bike',
+        engine_cc: 110,
+        top_speed: 100,
+        fuel_type: 'Petrol (E10)',
         plate: user.user_metadata?.vehicle_plate || 'None',
         driver:
           user.user_metadata?.full_name ||
-          'None',
+          'Owner',
         status: 'Active',
         mileage: 0,
-        fuel_level: 0,
+        fuel_level: 100,
         purchase_date: null,
+        ex_showroom_price: 0,
       }
 
       const { data: createdVehicle } = await supabase
@@ -734,7 +799,7 @@ export async function fetchFleetData(activeUser = null, targetVehicleCode = null
       ? (refillsRes.data || [])
           .filter((r) => r.vehicle_code === primaryCode)
           .map(mapFuelRefillRow)
-      : defaultFuelRefills
+      : []
 
     // Odometer is strictly derived from the latest fuel refill (no manual override)
     if (fuelRefills.length > 0 && fuelRefills[0].odometerKm > 0) {
@@ -756,7 +821,14 @@ export async function fetchFleetData(activeUser = null, targetVehicleCode = null
         ? healthItemsRes.data
             .filter((i) => i.vehicle_code === primaryCode)
             .map(mapMaintenanceItemRow)
-        : defaultMaintenanceItems
+        : defaultMaintenanceItems.map((item, idx) => ({
+            id: `starter-item-${idx}`,
+            vehicleCode: primaryCode,
+            itemKey: item.itemKey || item.key,
+            label: item.label,
+            intervalKm: item.intervalKm || 1000,
+            lastServiceOdo: 0,
+          }))
 
     const maintenanceItems = rawItems.map((item) => ({
       ...item,
@@ -768,36 +840,36 @@ export async function fetchFleetData(activeUser = null, targetVehicleCode = null
       ? (serviceLogsRes.data || [])
           .filter((l) => l.vehicle_code === primaryCode)
           .map(mapComponentServiceLogRow)
-      : defaultComponentServiceLogs
+      : []
 
     const vehicleRepairs = !repairsRes.error
       ? (repairsRes.data || [])
           .filter((r) => r.vehicle_code === primaryCode)
           .map(mapVehicleRepairRow)
-      : defaultVehicleRepairs
+      : []
 
     const vehicleDocuments = !docsRes.error
       ? (docsRes.data || [])
           .filter((d) => d.vehicle_code === primaryCode)
           .map(mapVehicleDocumentRow)
-      : defaultVehicleDocuments
+      : []
 
     const serviceReminders = !remindersRes.error
       ? (remindersRes.data || [])
           .filter((r) => r.vehicle_code === primaryCode)
           .map(mapServiceReminderRow)
           .sort(sortServiceReminders)
-      : defaultServiceReminders.slice().sort(sortServiceReminders)
+      : []
 
     const vehicleModifications = !modsRes.error
       ? (modsRes.data || [])
           .filter((m) => m.vehicle_code === primaryCode)
           .map(mapVehicleModificationRow)
-      : defaultVehicleModifications
+      : []
 
     const analytics = computeFleetAnalytics(
       vehicles,
-      monthlyTrends.length > 0 ? monthlyTrends : mockMonthlyTrends,
+      monthlyTrends,
       fuelRefills,
       maintenance,
       componentServiceLogs,
@@ -812,10 +884,8 @@ export async function fetchFleetData(activeUser = null, targetVehicleCode = null
       needsSchema: false,
       needsSchemaUpgrade: false,
       vehicles,
-      maintenance:
-        maintenance.length > 0 ? maintenance : allMaintenance.slice(0, 3),
-      monthlyTrends:
-        monthlyTrends.length > 0 ? monthlyTrends : mockMonthlyTrends,
+      maintenance,
+      monthlyTrends,
       fuelRefills,
       maintenanceItems,
       componentServiceLogs,
@@ -977,14 +1047,15 @@ export async function createVehicleRecord(user, vehicleInput) {
     model: vehicleInput.model?.trim() || 'None',
     category,
     sub_type: subType,
-    engine_cc: Math.max(0, Number(vehicleInput.engineCc) || 0),
+    type: subType,
+    engine_cc: Math.max(1, Number(vehicleInput.engineCc) || 110),
     top_speed: Math.max(0, Number(vehicleInput.topSpeed) || 0),
-    fuel_type: vehicleInput.fuelType?.trim() || 'None',
+    fuel_type: vehicleInput.fuelType?.trim() || 'Petrol (E10)',
     plate: vehicleInput.plate?.trim()?.toUpperCase() || 'None',
     driver: vehicleInput.driver?.trim() || 'None',
     status: vehicleInput.status || 'Active',
     mileage: Math.max(0, Number(vehicleInput.mileage) || 0),
-    fuel_level: Math.max(0, Number(vehicleInput.fuelLevel) || 0),
+    fuel_level: Math.min(100, Math.max(0, Number(vehicleInput.fuelLevel) || 100)),
     purchase_date:
       vehicleInput.purchaseDate && vehicleInput.purchaseDate !== 'DD-MM-YYYY'
         ? vehicleInput.purchaseDate
@@ -1048,28 +1119,53 @@ export async function deleteVehicleRecord(vehicle) {
 
 export async function resetAllDataRecord(user) {
   if (isSupabaseConfigured && supabase && user?.id) {
-    // 1. Delete all user vehicles (which cascades and deletes all child records in PostgreSQL)
+    // 1. Find all vehicles for this user or legacy unassigned vehicles to delete child records
+    const { data: userVehicles } = await supabase
+      .from('vehicles')
+      .select('vehicle_code')
+      .or(`user_id.eq.${user.id},user_id.is.null`)
+
+    const vehicleCodes = (userVehicles || [])
+      .map((v) => v.vehicle_code)
+      .filter(Boolean)
+
+    // Delete all user child records FIRST to satisfy foreign key constraints
+    await Promise.allSettled([
+      supabase.from('fuel_refills').delete().or(`user_id.eq.${user.id},user_id.is.null`),
+      supabase.from('component_service_logs').delete().or(`user_id.eq.${user.id},user_id.is.null`),
+      supabase.from('vehicle_repairs').delete().or(`user_id.eq.${user.id},user_id.is.null`),
+      supabase.from('vehicle_documents').delete().or(`user_id.eq.${user.id},user_id.is.null`),
+      supabase.from('service_reminders').delete().or(`user_id.eq.${user.id},user_id.is.null`),
+      supabase.from('vehicle_modifications').delete().or(`user_id.eq.${user.id},user_id.is.null`),
+      supabase.from('maintenance_logs').delete().or(`user_id.eq.${user.id},user_id.is.null`),
+      supabase.from('maintenance_items').delete().or(`user_id.eq.${user.id},user_id.is.null`),
+      supabase.from('monthly_fleet_metrics').delete().or(`user_id.eq.${user.id},user_id.is.null`),
+    ])
+
+    if (vehicleCodes.length > 0) {
+      await Promise.allSettled([
+        supabase.from('fuel_refills').delete().in('vehicle_code', vehicleCodes),
+        supabase.from('component_service_logs').delete().in('vehicle_code', vehicleCodes),
+        supabase.from('vehicle_repairs').delete().in('vehicle_code', vehicleCodes),
+        supabase.from('vehicle_documents').delete().in('vehicle_code', vehicleCodes),
+        supabase.from('service_reminders').delete().in('vehicle_code', vehicleCodes),
+        supabase.from('vehicle_modifications').delete().in('vehicle_code', vehicleCodes),
+        supabase.from('maintenance_logs').delete().in('vehicle_code', vehicleCodes),
+        supabase.from('maintenance_items').delete().in('vehicle_code', vehicleCodes),
+      ])
+    }
+
+    // 2. NOW delete all vehicles safely
     const { error: delError } = await supabase
       .from('vehicles')
       .delete()
-      .eq('user_id', user.id)
+      .or(`user_id.eq.${user.id},user_id.is.null`)
 
     if (delError) {
       console.warn('Error deleting user vehicles during reset:', delError.message)
     }
 
-    // 2. Also ensure any user-specific records in child tables are clean
-    await Promise.allSettled([
-      supabase.from('fuel_refills').delete().eq('user_id', user.id),
-      supabase.from('maintenance_items').delete().eq('user_id', user.id),
-      supabase.from('service_reminders').delete().eq('user_id', user.id),
-      supabase.from('component_service_logs').delete().eq('user_id', user.id),
-      supabase.from('vehicle_repairs').delete().eq('user_id', user.id),
-      supabase.from('vehicle_documents').delete().eq('user_id', user.id),
-      supabase.from('vehicle_modifications').delete().eq('user_id', user.id),
-    ])
-
-    // 3. Provision a fresh, clean default vehicle profile
+    // 3. Provision a fresh, clean default vehicle profile with valid DB constraints
     const newVehicleCode = `VH-${user.id.slice(0, 4).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`
     const payload = {
       user_id: user.id,
@@ -1079,14 +1175,15 @@ export async function resetAllDataRecord(user) {
       model: 'None',
       category: 'Two Wheeler',
       sub_type: 'Bike',
-      engine_cc: 0,
-      top_speed: 0,
-      fuel_type: 'None',
+      type: 'Bike',
+      engine_cc: 110,
+      top_speed: 100,
+      fuel_type: 'Petrol (E10)',
       plate: 'None',
-      driver: 'None',
+      driver: 'Owner',
       status: 'Active',
       mileage: 0,
-      fuel_level: 0,
+      fuel_level: 100,
       purchase_date: null,
       ex_showroom_price: 0,
     }
@@ -1094,14 +1191,12 @@ export async function resetAllDataRecord(user) {
     const { error: createError } = await supabase
       .from('vehicles')
       .insert([payload])
-      .select('*')
-      .single()
 
     if (createError) {
       console.warn('Error creating default vehicle after reset:', createError.message)
     }
 
-    // 4. Provision standard 18 starter maintenance items
+    // 4. Provision standard 18 starter maintenance items with 0 lastServiceOdo
     const starterItems = defaultMaintenanceItems.map((item, idx) => ({
       user_id: user.id,
       vehicle_code: newVehicleCode,
@@ -1118,6 +1213,7 @@ export async function resetAllDataRecord(user) {
       try {
         localStorage.removeItem('mkd_active_vehicle_code')
         localStorage.setItem('mkd_active_vehicle_code', newVehicleCode)
+        localStorage.removeItem('mkd_guest_fleet_data')
       } catch {
         // ignore
       }
@@ -1129,10 +1225,59 @@ export async function resetAllDataRecord(user) {
     }
   }
 
-  // Guest / Offline fallback: clean all local storage
+  // Guest / Offline fallback: clean all local storage and store a clean 0-metric starter profile
+  const cleanVehicle = {
+    id: `VH-LOCAL-${Date.now().toString(36).toUpperCase()}`,
+    dbId: null,
+    userId: null,
+    name: 'Enter Vehicle Name',
+    brand: 'None',
+    model: 'None',
+    category: 'Two Wheeler',
+    subType: 'Bike',
+    type: 'Bike',
+    engineCc: 110,
+    topSpeed: 100,
+    speed: 0,
+    fuelType: 'Petrol (E10)',
+    plate: 'None',
+    driver: 'Owner',
+    status: 'Active',
+    mileage: 0,
+    fuelLevel: 100,
+    purchaseDate: 'DD-MM-YYYY',
+    exShowroomPrice: 0,
+    lastService: 'None',
+    nextService: 'None',
+  }
+
+  const cleanGuestData = {
+    vehicles: [cleanVehicle],
+    primaryVehicle: cleanVehicle,
+    fuelRefills: [],
+    maintenanceItems: defaultMaintenanceItems.map((item, idx) => ({
+      id: `local-item-${idx}`,
+      vehicleCode: cleanVehicle.id,
+      itemKey: item.itemKey || item.key,
+      label: item.label,
+      intervalKm: item.intervalKm || 1000,
+      lastServiceOdo: 0,
+      sortOrder: idx + 1,
+    })),
+    componentServiceLogs: [],
+    vehicleRepairs: [],
+    vehicleDocuments: [],
+    serviceReminders: [],
+    vehicleModifications: [],
+    monthlyTrends: [],
+    maintenance: [],
+  }
+
   if (typeof window !== 'undefined') {
     try {
       localStorage.clear()
+      localStorage.setItem('mkd_guest_fleet_data', JSON.stringify(cleanGuestData))
+      localStorage.setItem('mkd_active_vehicle_code', cleanVehicle.id)
     } catch {
       // ignore
     }
@@ -1140,7 +1285,7 @@ export async function resetAllDataRecord(user) {
 
   return {
     success: true,
-    vehicleCode: defaultVehicle.id,
+    vehicleCode: cleanVehicle.id,
   }
 }
 
