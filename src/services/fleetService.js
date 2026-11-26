@@ -123,11 +123,15 @@ function mapFuelRefillRow(row) {
 }
 
 function mapMaintenanceItemRow(row) {
+  const rawLabel = row.label || ''
+  const label = rawLabel.endsWith(' Replace')
+    ? `${rawLabel}ment`
+    : rawLabel
   return {
     id: row.id,
     vehicleCode: row.vehicle_code,
     itemKey: row.item_key,
-    label: row.label,
+    label,
     intervalKm: Number(row.interval_km) || 1000,
     lastServiceOdo: Number(row.last_service_odo) || 0,
     sortOrder: Number(row.sort_order) || 0,

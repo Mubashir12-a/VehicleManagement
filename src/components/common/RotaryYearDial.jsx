@@ -199,8 +199,8 @@ export default function RotaryYearDial({
               <span className="h-0.5 w-1 rounded-full bg-lime-400" />
               <span className="h-0.5 w-1 rounded-full bg-white" />
             </div>
-            <span className="font-mono text-[10px] font-black text-white leading-tight mt-0.5">
-              {String(activeYear).slice(2)}&apos;
+            <span className="font-mono text-[9px] font-black text-white leading-tight mt-0.5">
+              {activeYear}
             </span>
           </div>
         </button>

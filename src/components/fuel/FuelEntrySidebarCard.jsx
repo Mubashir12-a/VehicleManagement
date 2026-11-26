@@ -220,7 +220,7 @@ function FuelEntrySidebarForm({
             <p className="text-[11px] text-zinc-400">
               {isEditing
                 ? `ID: ${String(editingRefill?.id || '').slice(0, 8)} · ${editingRefill?.refillDate || ''}`
-                : '3-way auto calculation · Synced with Odo'}
+                : '3-way auto calculation · Synced with Odometer'}
             </p>
           </div>
         </div>
@@ -247,11 +247,15 @@ function FuelEntrySidebarForm({
         {/* Odometer & Date */}
         <div className="grid grid-cols-2 gap-2.5">
           <div>
-            <label className="block text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+            <label
+              htmlFor="fuel-sidebar-odo"
+              className="block text-[11px] font-semibold uppercase tracking-wider text-zinc-400"
+            >
               Odometer (KM) *
             </label>
             <div className="relative mt-1">
               <input
+                id="fuel-sidebar-odo"
                 type="number"
                 required
                 min="0"
@@ -263,17 +267,21 @@ function FuelEntrySidebarForm({
                 }
                 className="w-full rounded-xl border border-white/10 bg-[#12161c] px-3 py-2 font-mono text-xs text-white placeholder-zinc-500 focus:border-lime-400 focus:outline-none"
               />
-              <span className="pointer-events-none absolute right-2.5 top-2 font-mono text-[10px] font-bold text-zinc-500">
+              <span className="pointer-events-none absolute right-2.5 top-2 font-mono text-[10px] font-bold text-zinc-400">
                 KM
               </span>
             </div>
           </div>
 
           <div>
-            <label className="block text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+            <label
+              htmlFor="fuel-sidebar-date"
+              className="block text-[11px] font-semibold uppercase tracking-wider text-zinc-400"
+            >
               Refill Date *
             </label>
             <input
+              id="fuel-sidebar-date"
               type="date"
               required
               value={formData.refillDate}
@@ -418,7 +426,7 @@ function FuelEntrySidebarForm({
             placeholder="Enter station name"
             className="mt-1 w-full rounded-xl border border-white/10 bg-[#12161c] px-3 py-1.5 text-xs text-white focus:border-lime-400 focus:outline-none"
           />
-          <div className="mt-1.5 flex flex-wrap gap-1">
+          <div className="mt-2 flex flex-wrap gap-2">
             {STATION_PRESETS.map((preset) => (
               <button
                 key={preset}
@@ -426,10 +434,10 @@ function FuelEntrySidebarForm({
                 onClick={() =>
                   setFormData((prev) => ({ ...prev, stationName: preset }))
                 }
-                className={`rounded-md px-2 py-0.5 text-[10px] font-medium transition-colors ${
+                className={`rounded-lg px-2.5 py-1.5 text-[11px] font-medium transition-colors ${
                   formData.stationName === preset
                     ? 'border border-lime-400/40 bg-lime-400/15 text-lime-300 font-bold'
-                    : 'border border-white/8 bg-white/4 text-zinc-400 hover:bg-white/8'
+                    : 'border border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10'
                 }`}
               >
                 {preset}

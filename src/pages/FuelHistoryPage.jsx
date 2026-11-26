@@ -208,7 +208,7 @@ export default function FuelHistoryPage() {
     <div className="space-y-6">
       {/* Page Header: Pure Fuel Focus */}
       <PageHeader
-        title="Fuel Ledger & Refill History"
+        title="Fuel Ledger"
         description="Complete fuel transactions, pump rates, station logs, and monthly expense breakdown."
         actions={
           <button
@@ -245,14 +245,14 @@ export default function FuelHistoryPage() {
       <div className="grid grid-cols-2 gap-3.5 sm:gap-4 lg:grid-cols-4">
         {/* Card 1: Total Spend */}
         <div className="rounded-2xl border border-white/8 bg-[#0d1014] p-4 shadow-md">
-          <span className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+          <span className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400">
             Total Fuel Spend
           </span>
           <span className="mt-1 block font-mono text-2xl font-black text-white sm:text-3xl">
             ₹{stats.totalSpend.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
           </span>
           <span className="mt-1 block text-[11px] text-zinc-400">
-            All-time across {stats.totalEntries} refill trips
+            All-time across {stats.totalEntries} {stats.totalEntries === 1 ? 'refill trip' : 'refill trips'}
           </span>
         </div>
 
@@ -275,12 +275,12 @@ export default function FuelHistoryPage() {
 
         {/* Card 3: Running Cost per km */}
         <div className="rounded-2xl border border-white/8 bg-[#0d1014] p-4 shadow-md">
-          <span className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+          <span className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400">
             Avg Running Cost
           </span>
           <span className="mt-1 block font-mono text-2xl font-black text-emerald-400 sm:text-3xl">
             {stats.costPerKm > 0 ? `₹${stats.costPerKm}` : '—'}{' '}
-            <span className="text-base font-bold text-zinc-500">/km</span>
+            <span className="text-base font-bold text-zinc-400">/km</span>
           </span>
           <span className="mt-1 block text-[11px] text-zinc-400">
             Fuel cost per km driven
@@ -289,7 +289,7 @@ export default function FuelHistoryPage() {
 
         {/* Card 4: Total Liters & Avg Price */}
         <div className="rounded-2xl border border-white/8 bg-[#0d1014] p-4 shadow-md">
-          <span className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+          <span className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400">
             Fuel Pumped & Rate
           </span>
           <span className="mt-1 block font-mono text-2xl font-black text-white sm:text-3xl">
@@ -310,11 +310,11 @@ export default function FuelHistoryPage() {
             onClick={() => setActiveView('both')}
             className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition-all ${
               activeView === 'both'
-                ? 'bg-lime-400 text-zinc-950 shadow-[0_0_14px_rgba(163,230,53,0.3)]'
-                : 'border border-white/8 bg-white/5 text-zinc-400 hover:text-white'
+                ? 'border border-white/20 bg-white/12 text-white shadow-sm'
+                : 'border border-white/8 bg-white/4 text-zinc-400 hover:text-white'
             }`}
           >
-            <Layers className="h-3.5 w-3.5" />
+            <Layers className="h-3.5 w-3.5 text-lime-400" />
             Combined View
           </button>
           <button
@@ -322,11 +322,11 @@ export default function FuelHistoryPage() {
             onClick={() => setActiveView('analytics')}
             className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition-all ${
               activeView === 'analytics'
-                ? 'bg-lime-400 text-zinc-950 shadow-[0_0_14px_rgba(163,230,53,0.3)]'
-                : 'border border-white/8 bg-white/5 text-zinc-400 hover:text-white'
+                ? 'border border-white/20 bg-white/12 text-white shadow-sm'
+                : 'border border-white/8 bg-white/4 text-zinc-400 hover:text-white'
             }`}
           >
-            <BarChart3 className="h-3.5 w-3.5" />
+            <BarChart3 className="h-3.5 w-3.5 text-lime-400" />
             Consumption Analytics & Graphs
           </button>
           <button
@@ -334,17 +334,17 @@ export default function FuelHistoryPage() {
             onClick={() => setActiveView('ledger')}
             className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition-all ${
               activeView === 'ledger'
-                ? 'bg-lime-400 text-zinc-950 shadow-[0_0_14px_rgba(163,230,53,0.3)]'
-                : 'border border-white/8 bg-white/5 text-zinc-400 hover:text-white'
+                ? 'border border-white/20 bg-white/12 text-white shadow-sm'
+                : 'border border-white/8 bg-white/4 text-zinc-400 hover:text-white'
             }`}
           >
-            <Fuel className="h-3.5 w-3.5" />
+            <Fuel className="h-3.5 w-3.5 text-lime-400" />
             Refill Ledger & Cards
           </button>
         </div>
 
-        <span className="text-xs font-semibold text-zinc-500">
-          Showing {fuelRefills.length} total fuel transactions
+        <span className="text-xs font-semibold text-zinc-400">
+          Showing {fuelRefills.length} total fuel {fuelRefills.length === 1 ? 'transaction' : 'transactions'}
         </span>
       </div>
 
@@ -421,6 +421,7 @@ export default function FuelHistoryPage() {
               {/* Month Dropdown */}
               <div className="relative">
                 <select
+                  aria-label="Filter by month"
                   value={selectedMonth}
                   onChange={(e) => setSelectedMonth(e.target.value)}
                   className="appearance-none rounded-xl border border-white/10 bg-[#12161c] py-2 pl-3 pr-7 text-xs font-semibold text-zinc-200 focus:border-lime-400 focus:outline-none"
@@ -477,6 +478,7 @@ export default function FuelHistoryPage() {
             <div className="relative w-full sm:w-56">
               <input
                 type="text"
+                aria-label="Search station or location"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search station / location..."

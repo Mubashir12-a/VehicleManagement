@@ -1,4 +1,4 @@
-import { Check, Fuel, Plus, Sparkles, Zap } from 'lucide-react'
+import { Check, Fuel, Sparkles, Zap } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAnimatedNumber } from '../../hooks/useAnimatedNumber'
@@ -218,7 +218,7 @@ export default function OdometerClusterCard({
           <div className="flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-lime-400 shadow-[0_0_8px_#a3e635]" />
             <h3 className="text-base font-extrabold uppercase tracking-wider text-white">
-              {isCar ? 'Digital Cockpit Console' : 'Sports Instrument Cluster'}
+              {isCar ? 'Digital Cockpit Console' : 'Instrument Cluster'}
             </h3>
           </div>
           <p className="mt-1 text-xs text-zinc-400">
@@ -236,7 +236,7 @@ export default function OdometerClusterCard({
             }
             className="inline-flex items-center gap-1.5 rounded-xl bg-lime-400 px-3.5 py-2 text-xs font-bold text-zinc-950 shadow-[0_0_16px_rgba(163,230,53,0.22)] transition-colors hover:bg-lime-300"
           >
-            <Plus className="h-3.5 w-3.5" />
+            <Fuel className="h-3.5 w-3.5" />
             Log Fuel Refill
           </button>
         </div>
@@ -372,7 +372,7 @@ export default function OdometerClusterCard({
         {/* 3. CENTER TELEMETRY & ROLLING ODOMETER TUMBLER */}
         <div className="pointer-events-none relative z-10 mt-4 sm:mt-5 grid grid-cols-1 items-center gap-4 sm:gap-6 lg:grid-cols-12">
           {/* Left: Speedometer with Increasing Animation & 0-60 Green, 60-120 Orange, 120+ Red */}
-          <div className="flex items-center justify-between gap-2.5 lg:col-span-5 lg:justify-start">
+          <div className="flex items-center justify-between gap-2.5 lg:col-span-5">
             <div className="flex items-baseline gap-2">
               <span
                 className={`font-mono text-5xl font-black italic tracking-tighter tabular-nums transition-colors duration-150 sm:text-6xl ${speedColor.text} ${speedColor.dropGlow}`}

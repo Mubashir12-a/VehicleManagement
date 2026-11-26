@@ -8,7 +8,6 @@ import {
   Pencil,
   Wrench,
   X,
-  Zap,
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -186,13 +185,17 @@ export default function VehicleHeroCard({
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <h2 className="text-4xl font-black tracking-tight text-white sm:text-5xl">
-                      {vehicle.model}
+                      {!vehicle.model || vehicle.model === 'None'
+                        ? 'Add Your Vehicle'
+                        : vehicle.model}
                     </h2>
                     <p className="mt-2 text-sm font-bold uppercase tracking-[0.14em] text-zinc-400">
-                      {vehicle.brand}
+                      {!vehicle.brand || vehicle.brand === 'None'
+                        ? 'Brand Not Set'
+                        : vehicle.brand}
                     </p>
-                    <p className="mt-0.5 text-sm font-semibold uppercase tracking-[0.12em] text-zinc-500">
-                      • {vehicle.name}
+                    <p className="mt-0.5 text-sm font-semibold uppercase tracking-[0.12em] text-zinc-400">
+                      {vehicle.name || 'Enter Vehicle Name'}
                     </p>
                   </div>
 
@@ -210,7 +213,10 @@ export default function VehicleHeroCard({
                 <div className="mt-3 sm:mt-5 flex flex-wrap items-center gap-2 sm:gap-2.5">
                   <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 sm:px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wider text-zinc-300">
                     <span className="h-2 w-2 rounded-full bg-lime-400 shadow-[0_0_8px_#a3e635]" />
-                    {vehicle.fuelType || 'Petrol (E10)'} · {Number(vehicle.engineCc).toLocaleString()} CC
+                    {!vehicle.fuelType || vehicle.fuelType === 'None'
+                      ? 'Fuel Not Set'
+                      : vehicle.fuelType}{' '}
+                    · {Number(vehicle.engineCc).toLocaleString()} CC
                   </span>
 
                   {latestMileage > 0 && (
@@ -219,7 +225,7 @@ export default function VehicleHeroCard({
                       className="inline-flex items-center gap-1.5 rounded-full border border-lime-400/30 bg-lime-400/10 px-3 sm:px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-wider text-lime-300 shadow-[0_0_12px_rgba(163,230,53,0.15)] transition-colors hover:bg-lime-400/20"
                       title="Latest computed fuel mileage"
                     >
-                      <Zap className="h-3 w-3 text-lime-400" />
+                      <Fuel className="h-3 w-3 text-lime-400" />
                       Mileage: {latestMileage} KM/L
                     </Link>
                   )}
@@ -259,7 +265,7 @@ export default function VehicleHeroCard({
                     {animatedMileage.toLocaleString('en-IN')}{' '}
                     <span className="text-base font-medium text-zinc-400">km</span>
                   </p>
-                  <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+                  <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
                     Odometer
                   </p>
                 </div>
@@ -270,11 +276,11 @@ export default function VehicleHeroCard({
                   <p className="mt-2.5 text-2xl font-extrabold tracking-tight text-white tabular-nums">
                     ₹{Math.round(animatedSpend).toLocaleString('en-IN')}
                   </p>
-                  <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+                  <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
                     Total Spend
                   </p>
                   {Number(vehicle?.exShowroomPrice) > 0 && (
-                    <span className="mt-0.5 block text-[10px] font-medium text-zinc-500">
+                    <span className="mt-0.5 block text-[10px] font-medium text-zinc-400">
                       Excl. Ex-Showroom (₹{Number(vehicle.exShowroomPrice).toLocaleString('en-IN')})
                     </span>
                   )}
@@ -286,14 +292,14 @@ export default function VehicleHeroCard({
                   className="group/mileage block cursor-pointer transition hover:opacity-90"
                   title="View Fuel History & Mileage Analytics"
                 >
-                  <Zap className="h-5 w-5 text-lime-400 transition-transform group-hover/mileage:scale-110" />
+                  <Fuel className="h-5 w-5 text-lime-400 transition-transform group-hover/mileage:scale-110" />
                   <p className="mt-2.5 text-2xl font-extrabold tracking-tight text-white tabular-nums">
                     {latestMileage > 0 ? latestMileage : '—'}{' '}
                     {latestMileage > 0 && (
                       <span className="text-base font-medium text-zinc-400">km/L</span>
                     )}
                   </p>
-                  <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500 transition-colors group-hover/mileage:text-lime-400">
+                  <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-400 transition-colors group-hover/mileage:text-lime-400">
                     Fuel Mileage
                   </p>
                 </Link>
@@ -313,11 +319,11 @@ export default function VehicleHeroCard({
                     >
                       {healthyCount}
                     </span>
-                    <span className="font-mono text-base font-normal text-zinc-500">
+                    <span className="font-mono text-base font-normal text-zinc-400">
                       /{totalItems}
                     </span>
                   </p>
-                  <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+                  <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
                     Health · {dueCount > 0 ? `${dueCount} Due` : 'All Good'}
                   </p>
                 </div>
@@ -335,7 +341,7 @@ export default function VehicleHeroCard({
                       {totalServicesDone === 1 ? 'log' : 'logs'}
                     </span>
                   </p>
-                  <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500 group-hover/svc:text-lime-400 transition-colors">
+                  <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-400 group-hover/svc:text-lime-400 transition-colors">
                     Services Done
                   </p>
                 </Link>
@@ -346,7 +352,7 @@ export default function VehicleHeroCard({
                   <p className="mt-2.5 text-2xl font-extrabold tracking-tight text-white tabular-nums">
                     {Number(vehicle.fuelLevel || 0)}%
                   </p>
-                  <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+                  <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
                     Fuel Level
                   </p>
                 </div>
@@ -364,9 +370,11 @@ export default function VehicleHeroCard({
                     )}
                   </div>
                   <p className="mt-2 font-mono text-base font-bold tracking-tight text-zinc-200">
-                    {vehicle.plate}
+                    {!vehicle.plate || vehicle.plate === 'None'
+                      ? 'No plate info'
+                      : vehicle.plate}
                   </p>
-                  <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+                  <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
                     Plate No.
                   </p>
                 </div>

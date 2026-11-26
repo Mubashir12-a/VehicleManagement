@@ -163,7 +163,7 @@ export const defaultMaintenanceItems = [
   {
     id: 'MI-16',
     itemKey: 'fork_oil_front',
-    label: 'Front Fork Oil Replace',
+    label: 'Front Fork Oil Replacement',
     category: 'Suspension',
     intervalKm: 15000,
     lastServiceOdo: 0,
@@ -172,7 +172,7 @@ export const defaultMaintenanceItems = [
   {
     id: 'MI-17',
     itemKey: 'rear_suspension',
-    label: 'Rear Suspension Replace',
+    label: 'Rear Suspension Replacement',
     category: 'Suspension',
     intervalKm: 30000,
     lastServiceOdo: 0,

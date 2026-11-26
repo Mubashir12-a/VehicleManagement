@@ -405,18 +405,18 @@ export default function FuelAnalyticsGraph({ fuelRefills = [] }) {
           </div>
         </div>
 
-        {/* View Switcher Pills */}
-        <div className="flex flex-wrap items-center gap-1.5 rounded-2xl border border-white/10 bg-[#12161d] p-1.5">
+        {/* View Switcher Tabs (Unified Shape & Subtle Active Indicator) */}
+        <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-white/10 bg-[#12161d] p-1.5">
           <button
             type="button"
             onClick={() => setActiveMode('efficiency')}
             className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition-all ${
               activeMode === 'efficiency'
-                ? 'bg-lime-400 text-zinc-950 shadow-[0_0_14px_rgba(163,230,53,0.3)]'
+                ? 'border border-white/20 bg-white/12 text-white shadow-sm'
                 : 'text-zinc-400 hover:text-white'
             }`}
           >
-            <Zap className="h-3.5 w-3.5" />
+            <Zap className="h-3.5 w-3.5 text-lime-400" />
             <span>Mileage (km/L)</span>
           </button>
           <button
@@ -424,11 +424,11 @@ export default function FuelAnalyticsGraph({ fuelRefills = [] }) {
             onClick={() => setActiveMode('cost')}
             className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition-all ${
               activeMode === 'cost'
-                ? 'bg-emerald-400 text-zinc-950 shadow-[0_0_14px_rgba(16,185,129,0.3)]'
+                ? 'border border-white/20 bg-white/12 text-white shadow-sm'
                 : 'text-zinc-400 hover:text-white'
             }`}
           >
-            <IndianRupee className="h-3.5 w-3.5" />
+            <IndianRupee className="h-3.5 w-3.5 text-emerald-400" />
             <span>Spend & Liters</span>
           </button>
           <button
@@ -436,11 +436,11 @@ export default function FuelAnalyticsGraph({ fuelRefills = [] }) {
             onClick={() => setActiveMode('distance')}
             className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition-all ${
               activeMode === 'distance'
-                ? 'bg-sky-400 text-zinc-950 shadow-[0_0_14px_rgba(56,189,248,0.3)]'
+                ? 'border border-white/20 bg-white/12 text-white shadow-sm'
                 : 'text-zinc-400 hover:text-white'
             }`}
           >
-            <Compass className="h-3.5 w-3.5" />
+            <Compass className="h-3.5 w-3.5 text-sky-400" />
             <span>Distance (km)</span>
           </button>
         </div>
@@ -516,7 +516,8 @@ export default function FuelAnalyticsGraph({ fuelRefills = [] }) {
                 Requires At Least 2 Fuel Refills for Trip Mileage Analysis
               </h4>
               <p className="mt-1 text-xs text-amber-200/90 leading-relaxed">
-                You have recorded {sortedRefills.length} refill. Mileage is measured by
+                You have recorded {sortedRefills.length}{' '}
+                {sortedRefills.length === 1 ? 'refill' : 'refills'}. Mileage is measured by
                 dividing the odometer distance between refills by the fuel consumed.
                 Log your next refill to unlock exact km/L efficiency charts.
               </p>

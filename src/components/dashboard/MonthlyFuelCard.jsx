@@ -117,7 +117,7 @@ export default function MonthlyFuelCard({ monthlyFuelSummary }) {
           {/* Secondary Details: Liters, Refills, Avg ₹/L */}
           <div className="mt-4 grid grid-cols-3 gap-2 border-t border-white/8 pt-3 text-center sm:text-left">
             <div className="rounded-xl bg-black/40 p-2.5">
-              <span className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+              <span className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400">
                 Quantity
               </span>
               <span className="mt-0.5 block font-mono text-sm font-extrabold text-zinc-200">
@@ -126,7 +126,7 @@ export default function MonthlyFuelCard({ monthlyFuelSummary }) {
             </div>
 
             <div className="rounded-xl bg-black/40 p-2.5">
-              <span className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+              <span className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400">
                 Refills
               </span>
               <span className="mt-0.5 block font-mono text-sm font-extrabold text-zinc-200">
@@ -138,7 +138,7 @@ export default function MonthlyFuelCard({ monthlyFuelSummary }) {
             </div>
 
             <div className="rounded-xl bg-black/40 p-2.5">
-              <span className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+              <span className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400">
                 Avg Rate
               </span>
               <span className="mt-0.5 block font-mono text-sm font-extrabold text-lime-300">
@@ -157,7 +157,7 @@ export default function MonthlyFuelCard({ monthlyFuelSummary }) {
                 <Calendar className="h-3.5 w-3.5" />
               </span>
               <div>
-                <span className="block text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                <span className="block text-[10px] font-black uppercase tracking-widest text-zinc-400">
                   PREVIOUS MONTH
                 </span>
                 <h4 className="text-sm font-bold text-zinc-200">{last.label}</h4>
@@ -184,33 +184,33 @@ export default function MonthlyFuelCard({ monthlyFuelSummary }) {
           {/* Secondary Details: Liters, Refills, Avg ₹/L */}
           <div className="mt-4 grid grid-cols-3 gap-2 border-t border-white/8 pt-3 text-center sm:text-left">
             <div className="rounded-xl bg-black/30 p-2.5">
-              <span className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+              <span className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400">
                 Quantity
               </span>
               <span className="mt-0.5 block font-mono text-sm font-extrabold text-zinc-300">
-                {last.totalLiters} <span className="text-[10px] text-zinc-500">L</span>
+                {last.totalLiters} <span className="text-[10px] text-zinc-400">L</span>
               </span>
             </div>
 
             <div className="rounded-xl bg-black/30 p-2.5">
-              <span className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+              <span className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400">
                 Refills
               </span>
               <span className="mt-0.5 block font-mono text-sm font-extrabold text-zinc-300">
                 {last.refillCount}{' '}
-                <span className="text-[10px] text-zinc-500">
+                <span className="text-[10px] text-zinc-400">
                   {last.refillCount === 1 ? 'trip' : 'trips'}
                 </span>
               </span>
             </div>
 
             <div className="rounded-xl bg-black/30 p-2.5">
-              <span className="block text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+              <span className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400">
                 Avg Rate
               </span>
               <span className="mt-0.5 block font-mono text-sm font-extrabold text-zinc-300">
                 ₹{last.avgPrice}{' '}
-                <span className="text-[10px] text-zinc-500">/L</span>
+                <span className="text-[10px] text-zinc-400">/L</span>
               </span>
             </div>
           </div>
@@ -232,7 +232,7 @@ export default function MonthlyFuelCard({ monthlyFuelSummary }) {
           </span>
         </div>
 
-        <span className="text-[11px] text-zinc-500">
+        <span className="text-[11px] text-zinc-400">
           Updated with latest refill telemetry
         </span>
       </div>

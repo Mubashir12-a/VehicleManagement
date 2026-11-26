@@ -3,7 +3,6 @@ import {
   CalendarClock,
   Fuel,
   LayoutDashboard,
-  Plus,
   ReceiptText,
   Settings,
   Sparkles,
@@ -118,10 +117,10 @@ export default function Sidebar({ isOpen, onClose }) {
             <NavLink
               to="/fuel-history"
               onClick={onClose}
-              className="flex items-center gap-1 rounded-lg border border-lime-400/30 bg-lime-400/15 px-2 py-1 text-[10px] font-bold text-lime-300 hover:bg-lime-400 hover:text-zinc-950 transition-colors"
+              className="inline-flex items-center gap-1 rounded-lg bg-lime-400 px-2.5 py-1 text-[10px] font-bold text-zinc-950 shadow-[0_0_10px_rgba(163,230,53,0.2)] hover:bg-lime-300 transition-colors"
             >
-              <Plus className="h-3 w-3 stroke-[2.5]" />
-              <span>Refill</span>
+              <Fuel className="h-3 w-3" />
+              <span>Log Fuel</span>
             </NavLink>
           </div>
 
@@ -133,7 +132,7 @@ export default function Sidebar({ isOpen, onClose }) {
                   ₹{Number(latestRefill.amountSpent || 0).toLocaleString('en-IN')}
                 </span>
               </div>
-              <div className="flex items-center justify-between text-[10px] text-zinc-500">
+              <div className="flex items-center justify-between text-[10px] text-zinc-400">
                 <span className="truncate max-w-[100px]">{latestRefill.stationName || 'Fuel Station'}</span>
                 <span>
                   {latestRefill.liters || 0} L
@@ -143,23 +142,23 @@ export default function Sidebar({ isOpen, onClose }) {
                 </span>
               </div>
               <div className="flex items-center justify-between border-t border-white/6 pt-1 text-[10px]">
-                <span className="text-zinc-500">This Month:</span>
+                <span className="text-zinc-400">This Month:</span>
                 <span className="font-mono font-bold text-lime-300">
                   ₹{Number(currentMonthSpend || 0).toLocaleString('en-IN')}
                 </span>
               </div>
             </div>
           ) : (
-            <p className="mt-2 text-[11px] text-zinc-500">
-              Log your first fuel entry to sync telemetry.
+            <p className="mt-2 text-[11px] text-zinc-400">
+              Log your first fuel entry to sync your data.
             </p>
           )}
         </div>
 
         <div className="mt-auto border-t border-white/8 p-4">
-          <div className="flex items-center justify-between text-[11px] text-zinc-500">
+          <div className="flex items-center justify-between text-[11px] text-zinc-400">
             <span>Garage Telemetry</span>
-            <span className="font-mono text-zinc-400">v1.2.0</span>
+            <span className="font-mono text-zinc-300">v1.2.0</span>
           </div>
         </div>
       </aside>
