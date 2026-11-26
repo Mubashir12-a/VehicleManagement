@@ -1645,8 +1645,7 @@ export async function createComponentServiceLogRecord(
       .single()
 
     if (logError) {
-      console.warn('Failed to insert service log to Supabase:', logError.message)
-      return { log: localLog, item: updatedItem, savedToSupabase: false }
+      throw new Error(logError.message || 'Failed to save service log to Supabase.')
     }
 
     if (item.id && !String(item.id).startsWith('MI-')) {
@@ -1759,8 +1758,7 @@ export async function createVehicleRepairRecord(primaryVehicle, repairInput) {
       .single()
 
     if (error) {
-      console.warn('Failed to insert vehicle repair to Supabase:', error.message)
-      return { repair: localRepair, savedToSupabase: false }
+      throw new Error(error.message || 'Failed to save vehicle repair to Supabase.')
     }
 
     return {
@@ -1842,8 +1840,7 @@ export async function upsertVehicleDocumentRecord(primaryVehicle, docInput) {
         .single()
 
       if (error) {
-        console.warn('Failed to update vehicle document in Supabase:', error.message)
-        return { doc: localDoc, savedToSupabase: false }
+        throw new Error(error.message || 'Failed to update vehicle document in Supabase.')
       }
       return { doc: mapVehicleDocumentRow(data), savedToSupabase: true }
     } else {
@@ -1867,8 +1864,7 @@ export async function upsertVehicleDocumentRecord(primaryVehicle, docInput) {
         .single()
 
       if (error) {
-        console.warn('Failed to insert vehicle document to Supabase:', error.message)
-        return { doc: localDoc, savedToSupabase: false }
+        throw new Error(error.message || 'Failed to save vehicle document to Supabase.')
       }
       return { doc: mapVehicleDocumentRow(data), savedToSupabase: true }
     }
@@ -1957,8 +1953,7 @@ export async function createServiceReminderRecord(
       .single()
 
     if (error) {
-      console.warn('Failed to insert service reminder to Supabase:', error.message)
-      return { reminder: localReminder, savedToSupabase: false }
+      throw new Error(error.message || 'Failed to save service reminder to Supabase.')
     }
 
     return {
@@ -2022,8 +2017,7 @@ export async function completeServiceReminderRecord(
       .single()
 
     if (error) {
-      console.warn('Failed to complete service reminder in Supabase:', error.message)
-      return { updates: localUpdated, savedToSupabase: false }
+      throw new Error(error.message || 'Failed to complete service reminder in Supabase.')
     }
 
     return {
@@ -2187,8 +2181,7 @@ export async function updateServiceReminderRecord(
       .single()
 
     if (error) {
-      console.warn('Failed to update service reminder in Supabase:', error.message)
-      return { reminder: localUpdated, savedToSupabase: false }
+      throw new Error(error.message || 'Failed to update service reminder in Supabase.')
     }
 
     return {
@@ -2269,11 +2262,7 @@ export async function createVehicleModificationRecord(
       .single()
 
     if (error) {
-      console.warn(
-        'Failed to insert vehicle modification to Supabase:',
-        error.message,
-      )
-      return { modification: localMod, savedToSupabase: false }
+      throw new Error(error.message || 'Failed to save vehicle modification to Supabase.')
     }
 
     return {
@@ -2374,11 +2363,7 @@ export async function updateVehicleModificationRecord(
       .single()
 
     if (error) {
-      console.warn(
-        'Failed to update vehicle modification in Supabase:',
-        error.message,
-      )
-      return { modification: localUpdated, savedToSupabase: false }
+      throw new Error(error.message || 'Failed to update vehicle modification in Supabase.')
     }
 
     return {

@@ -25,8 +25,7 @@ create table if not exists public.vehicles (
   model text not null default 'Activa 6G',
   category text not null default 'Two Wheeler'
     check (category in ('Two Wheeler', 'Four Wheeler')),
-  sub_type text not null default 'Scooter'
-    check (sub_type in ('Scooter', 'Bike', 'Car')),
+  sub_type text not null default 'Scooter',
   engine_cc integer not null default 110 check (engine_cc > 0),
   plate text not null,
   type text not null default 'Scooter',
@@ -246,16 +245,20 @@ drop policy if exists "User vehicles select" on public.vehicles;
 create policy "User vehicles select" on public.vehicles for select to authenticated using ((select auth.uid()) = user_id);
 drop policy if exists "User vehicles insert" on public.vehicles;
 create policy "User vehicles insert" on public.vehicles for insert to authenticated with check ((select auth.uid()) = user_id);
-drop policy if exists "User vehicles update" on public.vehicles for update to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
-drop policy if exists "User vehicles delete" on public.vehicles for delete to authenticated using ((select auth.uid()) = user_id);
+drop policy if exists "User vehicles update" on public.vehicles;
+create policy "User vehicles update" on public.vehicles for update to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+drop policy if exists "User vehicles delete" on public.vehicles;
+create policy "User vehicles delete" on public.vehicles for delete to authenticated using ((select auth.uid()) = user_id);
 
 -- Fuel Refills:
 drop policy if exists "User fuel select" on public.fuel_refills;
 create policy "User fuel select" on public.fuel_refills for select to authenticated using ((select auth.uid()) = user_id);
 drop policy if exists "User fuel insert" on public.fuel_refills;
 create policy "User fuel insert" on public.fuel_refills for insert to authenticated with check ((select auth.uid()) = user_id);
-drop policy if exists "User fuel update" on public.fuel_refills for update to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
-drop policy if exists "User fuel delete" on public.fuel_refills for delete to authenticated using ((select auth.uid()) = user_id);
+drop policy if exists "User fuel update" on public.fuel_refills;
+create policy "User fuel update" on public.fuel_refills for update to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+drop policy if exists "User fuel delete" on public.fuel_refills;
+create policy "User fuel delete" on public.fuel_refills for delete to authenticated using ((select auth.uid()) = user_id);
 
 -- Maintenance Items:
 drop policy if exists "User maintenance items select" on public.maintenance_items;
@@ -264,6 +267,28 @@ drop policy if exists "User maintenance items insert" on public.maintenance_item
 create policy "User maintenance items insert" on public.maintenance_items for insert to authenticated with check ((select auth.uid()) = user_id);
 drop policy if exists "User maintenance items update" on public.maintenance_items;
 create policy "User maintenance items update" on public.maintenance_items for update to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+drop policy if exists "User maintenance items delete" on public.maintenance_items;
+create policy "User maintenance items delete" on public.maintenance_items for delete to authenticated using ((select auth.uid()) = user_id);
+
+-- Maintenance Logs:
+drop policy if exists "User maintenance logs select" on public.maintenance_logs;
+create policy "User maintenance logs select" on public.maintenance_logs for select to authenticated using ((select auth.uid()) = user_id);
+drop policy if exists "User maintenance logs insert" on public.maintenance_logs;
+create policy "User maintenance logs insert" on public.maintenance_logs for insert to authenticated with check ((select auth.uid()) = user_id);
+drop policy if exists "User maintenance logs update" on public.maintenance_logs;
+create policy "User maintenance logs update" on public.maintenance_logs for update to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+drop policy if exists "User maintenance logs delete" on public.maintenance_logs;
+create policy "User maintenance logs delete" on public.maintenance_logs for delete to authenticated using ((select auth.uid()) = user_id);
+
+-- Monthly Fleet Metrics:
+drop policy if exists "User monthly metrics select" on public.monthly_fleet_metrics;
+create policy "User monthly metrics select" on public.monthly_fleet_metrics for select to authenticated using ((select auth.uid()) = user_id);
+drop policy if exists "User monthly metrics insert" on public.monthly_fleet_metrics;
+create policy "User monthly metrics insert" on public.monthly_fleet_metrics for insert to authenticated with check ((select auth.uid()) = user_id);
+drop policy if exists "User monthly metrics update" on public.monthly_fleet_metrics;
+create policy "User monthly metrics update" on public.monthly_fleet_metrics for update to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+drop policy if exists "User monthly metrics delete" on public.monthly_fleet_metrics;
+create policy "User monthly metrics delete" on public.monthly_fleet_metrics for delete to authenticated using ((select auth.uid()) = user_id);
 
 -- Component Service Logs:
 drop policy if exists "User service logs select" on public.component_service_logs;
@@ -323,11 +348,15 @@ create index if not exists idx_component_service_logs_user_id on public.componen
 create index if not exists idx_vehicle_repairs_user_id on public.vehicle_repairs (user_id);
 create index if not exists idx_vehicle_documents_user_id on public.vehicle_documents (user_id);
 create index if not exists idx_service_reminders_user_id on public.service_reminders (user_id);
+create index if not exists idx_maintenance_logs_user_id on public.maintenance_logs (user_id);
+create index if not exists idx_monthly_fleet_metrics_user_id on public.monthly_fleet_metrics (user_id);
 create index if not exists idx_vehicle_modifications_user_id on public.vehicle_modifications (user_id);
 
 -- Permissions for authenticated users:
 grant all on public.profiles to authenticated, service_role;
 grant all on public.vehicles to authenticated, service_role;
+grant all on public.maintenance_logs to authenticated, service_role;
+grant all on public.monthly_fleet_metrics to authenticated, service_role;
 grant all on public.fuel_refills to authenticated, service_role;
 grant all on public.maintenance_items to authenticated, service_role;
 grant all on public.component_service_logs to authenticated, service_role;
